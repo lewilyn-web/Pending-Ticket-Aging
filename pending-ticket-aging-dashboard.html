@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pending Ticket Aging — September 28, 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  :root{
+    --ink:#151A22; --surface:#1D2430; --surface-2:#232B39; --line:#333D4E;
+    --paper:#ECE7DB; --paper-dim:#A7ADBB;
+    --amber:#C6852E; --amber-soft:#8A6636; --teal:#4C9A8E; --rust:#B34B33; --slate:#6E7A8F;
+    --radius:2px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--ink); color:var(--paper); font-family:'Inter',sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1440px;margin:0 auto;padding:0 24px 90px;}
+  a{color:inherit;}
+
+  .layout{display:flex; align-items:flex-start; gap:28px;}
+  .sidebar{width:270px; flex:0 0 270px; position:sticky; top:20px; max-height:calc(100vh - 40px); overflow-y:auto; padding-bottom:20px;}
+  .main-content{flex:1; min-width:0;}
+
+  header{border-bottom:1px solid var(--line); padding:36px 0 28px; margin-bottom:32px;}
+  .kicker{font-size:13px; color:var(--paper-dim); letter-spacing:.02em; margin:0 0 10px;}
+  h1{font-family:'Source Serif 4', serif; font-weight:600; font-size:clamp(24px,4vw,34px); margin:0 0 20px; color:var(--paper);}
+
+  .header-actions{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px;}
+  .btn-primary{background:var(--amber-soft); color:var(--paper); border:1px solid var(--amber-soft); border-radius:var(--radius); padding:9px 18px; font-size:12.5px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif;}
+  .btn-primary:hover{background:var(--amber);}
+  .btn{background:var(--surface-2); color:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:8px 16px; font-size:12.5px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif;}
+  .btn:hover{border-color:var(--slate);}
+
+  /* filter bar (now in the sidebar) */
+  .filterbar{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; margin-bottom:0;}
+  .filterbar .row{display:flex; flex-direction:column; gap:12px; margin-bottom:14px;}
+  .filterbar label{display:block; font-size:11px; color:var(--paper-dim); margin-bottom:5px;}
+  .filterbar select, .filterbar input[type=text]{
+    width:100%; background:var(--surface-2); color:var(--paper); border:1px solid var(--line);
+    border-radius:var(--radius); padding:7px 9px; font-family:'Inter',sans-serif; font-size:12.5px;
+  }
+  .filterbar .actions{display:flex; flex-direction:column; align-items:stretch; gap:10px;}
+  .filterbar .count-note{font-size:12px; color:var(--paper-dim);}
+
+  .cards{display:grid; grid-template-columns:repeat(8,1fr); gap:1px; background:var(--line); border:1px solid var(--line); margin-bottom:36px;}
+  .cards .stat{background:var(--ink); padding:14px 14px 12px; min-width:0;}
+  .cards .stat .label{font-size:11px; color:var(--paper-dim); margin-bottom:6px; line-height:1.3;}
+  .cards .stat .value{font-family:'IBM Plex Mono',monospace; font-size:18px; font-weight:500; color:var(--paper); white-space:nowrap;}
+  .cards .stat .pct{font-size:11px; color:var(--paper-dim); margin-top:2px;}
+  .cards .stat .value.amber{color:var(--amber);}
+  .cards .stat .value.rust{color:var(--rust);}
+  .cards .stat .value.teal{color:var(--teal);}
+
+  h2{font-family:'Source Serif 4',serif; font-weight:600; font-size:21px; color:var(--paper); margin:0 0 4px;}
+  .section-sub{color:var(--paper-dim); font-size:13px; margin:0 0 18px;}
+  section{margin-bottom:52px;}
+
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px 14px; min-width:0;}
+  .card h3{font-size:13.5px; font-weight:600; color:var(--paper); margin:0 0 3px;}
+  .card .card-sub{font-size:12px; color:var(--paper-dim); margin:0 0 12px;}
+  canvas{max-width:100%;}
+
+  .pillbar{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px;}
+  .pillbar button{background:var(--surface); color:var(--paper-dim); border:1px solid var(--line); border-radius:14px; font-family:'Inter',sans-serif; font-size:12px; font-weight:500; padding:6px 14px; cursor:pointer; transition:background .15s,color .15s,border-color .15s;}
+  .pillbar button:hover{border-color:var(--slate);}
+  .pillbar button.active{background:var(--amber-soft); color:var(--paper); border-color:var(--amber-soft);}
+
+  .other-note{font-size:11.5px; color:var(--paper-dim); margin-top:8px; cursor:pointer; text-decoration:underline; text-decoration-color:var(--line);}
+  .other-detail{font-size:11.5px; color:var(--paper-dim); margin-top:6px; display:none; border-top:1px dashed var(--line); padding-top:8px;}
+  .other-detail.open{display:block;}
+  .other-detail span{display:inline-block; margin:2px 8px 2px 0;}
+
+  .table-scroll{overflow-x:auto; border:1px solid var(--line); border-top:none;}
+  table{width:100%; border-collapse:collapse; font-size:12.5px; min-width:1100px;}
+  thead th{position:sticky; top:0; background:var(--surface-2); text-align:left; font-weight:500; color:var(--paper-dim); font-size:11.5px; padding:9px 10px; border-bottom:1px solid var(--line); white-space:nowrap; cursor:pointer; user-select:none;}
+  thead th:hover{color:var(--paper);}
+  thead th .arrow{opacity:.5; font-size:10px; margin-left:3px;}
+  tbody td{padding:8px 10px; border-bottom:1px solid var(--line); color:var(--paper); vertical-align:top; white-space:nowrap;}
+  tbody tr:hover{background:var(--surface-2);}
+  tbody tr:last-child td{border-bottom:none;}
+  td.num{font-family:'IBM Plex Mono',monospace; text-align:right;}
+  td.click{cursor:pointer; text-decoration:underline; text-decoration-color:var(--line);}
+  td.click:hover{color:var(--amber);}
+  .name-cell{max-width:220px; white-space:normal;}
+  .status-pill{display:inline-block; font-size:10.5px; padding:2px 8px; border-radius:10px; background:var(--surface-2); color:var(--paper-dim); border:1px solid var(--line); white-space:nowrap;}
+
+  .barlist{display:flex; flex-direction:column; gap:8px;}
+  .barlist .row{display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;}
+  .barlist .row .name{font-size:12.5px; color:var(--paper); cursor:pointer;}
+  .barlist .row .name:hover{color:var(--amber); text-decoration:underline;}
+  .barlist .row .track{position:relative; height:6px; background:var(--surface-2); border-radius:3px; grid-column:1/-1; margin-top:-3px;}
+  .barlist .row .fill{position:absolute; left:0; top:0; height:100%; border-radius:3px;}
+  .barlist .row .count{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--paper-dim);}
+
+  .warn{color:var(--rust); font-size:11.5px; margin-top:6px; display:none;}
+  .warn.show{display:block;}
+
+  footer{border-top:1px solid var(--line); padding-top:18px; color:var(--paper-dim); font-size:11.5px;}
+
+  .email-panel{display:none; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; margin-bottom:28px;}
+  .email-panel.open{display:block;}
+  .email-panel h3{margin:0 0 4px;}
+  .email-panel .card-sub{margin-bottom:16px;}
+  .email-panel label{display:block; font-size:11px; color:var(--paper-dim); margin:0 0 5px;}
+  .email-panel input[type=text], .email-panel textarea{
+    width:100%; background:var(--surface-2); color:var(--paper); border:1px solid var(--line);
+    border-radius:var(--radius); padding:8px 10px; font-family:'Inter',sans-serif; font-size:12.5px; margin-bottom:14px;
+  }
+  .email-panel textarea{min-height:200px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; resize:vertical;}
+  .email-panel .field-row{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .email-panel .actions{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .copy-confirm{font-size:11.5px; color:var(--teal); margin-left:4px; display:none;}
+  .note{font-size:11.5px; color:var(--paper-dim); margin-top:8px;}
+
+  @media (max-width:1100px){
+    .layout{flex-direction:column;}
+    .sidebar{width:100%; flex:none; position:static; max-height:none; overflow-y:visible;}
+    .filterbar .row{flex-direction:row; flex-wrap:wrap;}
+    .filterbar .row > div{flex:1 1 180px;}
+  }
+  @media (max-width:1000px){
+    .cards{grid-template-columns:repeat(4,1fr);}
+    .grid-2,.grid-3{grid-template-columns:1fr 1fr;}
+  }
+  @media (max-width:600px){
+    .cards{grid-template-columns:repeat(2,1fr);}
+    .grid-2,.grid-3{grid-template-columns:1fr;}
+    .filterbar .row{flex-direction:column;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="layout">
+  <aside class="sidebar">
+    <div class="filterbar">
+      <h3 style="margin:0 0 4px; font-size:14.5px; color:var(--paper);">Filters</h3>
+      <p class="section-sub" style="margin:0 0 16px;">Everything on the page reacts to these.</p>
+      <div class="row">
+        <div><label>Search</label><input type="text" id="fSearch" placeholder="ID, vendor, PIC, owner, request name…"></div>
+        <div><label>Age group</label><select id="fAge"><option value="all">All</option></select></div>
+        <div><label>Update status</label><select id="fStage"><option value="all">All</option></select></div>
+        <div><label>Owner</label><select id="fOwner"><option value="all">All</option></select></div>
+        <div><label>PIC</label><select id="fPic"><option value="all">All</option></select></div>
+        <div><label>Workflow</label><select id="fWorkflow"><option value="all">All</option></select></div>
+        <div><label>Subcategory</label><select id="fSubcategory"><option value="all">All</option></select></div>
+        <div><label>Subsidiary</label><select id="fSubsidiary"><option value="all">All</option></select></div>
+        <div><label>Business unit</label><select id="fBU"><option value="all">All</option></select></div>
+        <div><label>Payment method</label><select id="fPM"><option value="all">All</option></select></div>
+      </div>
+      <div class="actions">
+        <span class="count-note" id="filterCount"></span>
+        <button class="btn" id="resetBtn">Reset filters</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+  <header>
+    <p class="kicker">Procurement operations — Block-inspired theme</p>
+    <h1>Pending Ticket Aging — September 28, 2026</h1>
+    <div class="header-actions">
+      <button class="btn-primary" id="emailToggleBtn">Draft aging email</button>
+    </div>
+
+    <div class="email-panel" id="emailPanel">
+      <h3>Draft aging email</h3>
+      <p class="card-sub">Built from the tickets currently matching your filters below — not the full unfiltered set. The link below carries your current filters as URL parameters, so anyone who opens it lands on the same filtered view of the interactive dashboard. The charts themselves only run on that hosted page, not inside Gmail or any email client — the "Full HTML" tab uses static, non-interactive bar charts that survive email clients. Nothing sends automatically.</p>
+
+      <label>Hosted report link (must be a real https:// URL your recipients can open — a local file path won't work as a link)</label>
+      <input type="text" id="reportLink" placeholder="https://…">
+      <p class="warn" id="linkWarning">That doesn't look like a hosted link yet (needs to start with http:// or https://). The email below will show a placeholder until you add one.</p>
+
+      <div class="field-row">
+        <div><label>To (comma-separated)</label><input type="text" id="emailTo" placeholder="name@company.com, name2@company.com"></div>
+        <div><label>Cc (optional)</label><input type="text" id="emailCc" placeholder=""></div>
+      </div>
+
+      <div class="pillbar" id="emailTabs" style="margin-top:4px;">
+        <button data-tab="plain" class="active">Plain text</button>
+        <button data-tab="html">Full HTML</button>
+      </div>
+
+      <div id="emailPlainView">
+        <label>Subject</label>
+        <input type="text" id="emailSubject">
+        <label>Message (auto-filled from current filters — editable)</label>
+        <textarea id="emailBody"></textarea>
+        <div class="actions">
+          <button class="btn-primary" id="openGmailBtn">Open in Gmail</button>
+          <button class="btn" id="openDefaultBtn">Open in default email app</button>
+          <button class="btn" id="copySummaryBtn">Copy summary</button>
+          <button class="btn" id="downloadChartsBtn">Download chart images</button>
+          <span class="copy-confirm" id="copyConfirm">Done.</span>
+        </div>
+        <p class="note">"Download chart images" saves the age-group and USD charts as PNG files (as currently filtered) that you can attach or paste into the email yourself.</p>
+      </div>
+
+      <div id="emailHtmlView" style="display:none;">
+        <p class="card-sub" style="margin-top:14px;">Live preview, rendered in an isolated frame so it looks exactly like it will in an inbox — table-based bars, no JavaScript, so it survives Gmail and Outlook alike.</p>
+        <div style="border:1px solid var(--line); border-radius:2px; overflow:hidden;">
+          <iframe id="emailPreviewFrame" style="width:100%; height:560px; border:0; display:block; background:#F4F4F4;"></iframe>
+        </div>
+        <div class="actions" style="margin-top:14px;">
+          <button class="btn-primary" id="copyFormattedBtn">Copy formatted email</button>
+          <button class="btn" id="copyHtmlSourceBtn">Copy HTML source</button>
+          <span class="copy-confirm" id="copyConfirmHtml">Done.</span>
+        </div>
+        <p class="note">"Copy formatted email" copies rich content — paste directly into a Gmail or Outlook compose window and the layout and colors carry over. "Copy HTML source" gives you the raw markup instead, e.g. for a mail-merge tool.</p>
+      </div>
+    </div>
+
+    <div class="cards" id="headlineCards"></div>
+  </header>
+
+  <section>
+    <h2>Pending status summary</h2>
+    <p class="section-sub">One bar per update status, sorted by ticket count, split into age segments. Click a segment to filter everything below to that status and age group.</p>
+    <div class="card">
+      <canvas id="statusSummaryChart" height="260"></canvas>
+    </div>
+  </section>
+
+  <section>
+    <h2>Aging by pending stage</h2>
+    <p class="section-sub">Share of open tickets and their dollar value by age group, with percentages on each slice.</p>
+    <div class="grid-2">
+      <div class="card"><h3>Ticket count</h3><canvas id="stackedAgeChart" height="240"></canvas></div>
+      <div class="card"><h3>USD value</h3><canvas id="stackedUsdChart" height="240"></canvas></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Composition</h2>
+    <p class="section-sub">Click any point or segment to filter. Workflow and Payment method are category comparisons, not time trends — the line just connects points for readability.</p>
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div class="card"><h3>Workflow</h3><p class="card-sub">Ticket count by workflow type (category comparison)</p><canvas id="pieWorkflow" height="230"></canvas></div>
+      <div class="card"><h3>Payment method</h3><p class="card-sub">Ticket count by payment method (category comparison)</p><canvas id="piePM" height="230"></canvas></div>
+    </div>
+    <div class="grid-3">
+      <div class="card"><h3>Subsidiary</h3><canvas id="dnSubsidiary" height="230"></canvas><div class="other-note" data-target="otherSubsidiary">show grouped categories</div><div class="other-detail" id="otherSubsidiary"></div></div>
+      <div class="card"><h3>Subcategory</h3><canvas id="dnSubcategory" height="230"></canvas><div class="other-note" data-target="otherSubcategory">show grouped categories</div><div class="other-detail" id="otherSubcategory"></div></div>
+      <div class="card"><h3>Business unit</h3><canvas id="dnBU" height="230"></canvas><div class="other-note" data-target="otherBU">show grouped categories</div><div class="other-detail" id="otherBU"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Pending-stage details</h2>
+    <p class="section-sub">Each blocker stage, split by age group. These three sections always show this exact stage, regardless of the Update status filter above — your other filters (owner, workflow, etc.) still apply.</p>
+
+    <div class="card" style="margin-bottom:20px;">
+      <h3>F&amp;S Group + Manager Approval</h3>
+      <p class="card-sub" id="fandsSub"></p>
+      <canvas id="fandsChart" height="140"></canvas>
+      <div class="table-scroll" style="margin-top:14px;"><table id="fandsTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <h3>Legal review</h3>
+      <p class="card-sub" id="legalSub"></p>
+      <canvas id="legalChart" height="140"></canvas>
+      <div class="table-scroll" style="margin-top:14px;"><table id="legalTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h3>Vendor confirmation</h3>
+      <p class="card-sub" id="vendorSub"></p>
+      <p class="card-sub">One bar per vendor, sorted by ticket count (ties broken by the oldest ticket). Click a segment to filter.</p>
+      <canvas id="vendorChart" height="260"></canvas>
+      <div class="table-scroll" style="margin-top:14px;"><table id="vendorTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Owner details</h2>
+    <p class="section-sub">Owner and PIC are different roles — Owner is the requester's counterpart who owns the ticket end-to-end; PIC is whoever a specific approval stage is currently waiting on. Search or pick an owner to see their load within your current filters.</p>
+
+    <div class="card" style="margin-bottom:20px;">
+      <h3>Utilization — tickets received this month</h3>
+      <p class="card-sub" id="utilizationSub">Every ticket assigned to each owner, any status, by intake date.</p>
+      <canvas id="ownerUtilizationChart" height="200"></canvas>
+    </div>
+
+    <input type="text" id="ownerSearch" placeholder="Search owners…" style="width:100%; max-width:320px; background:var(--surface-2); color:var(--paper); border:1px solid var(--line); border-radius:2px; padding:8px 10px; font-family:'Inter',sans-serif; font-size:12.5px; margin-bottom:14px;">
+    <div class="pillbar" id="ownerPillbar"></div>
+    <div class="cards" id="ownerCards" style="grid-template-columns:repeat(9,1fr); margin-bottom:20px;"></div>
+    <div class="card">
+      <h3 id="ownerTableTitle">Open tickets</h3>
+      <div class="table-scroll"><table id="ownerTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ticket detail</h2>
+    <p class="section-sub">Every pending ticket matching your filters. Search, sort by clicking a column, or use the filter bar above.</p>
+    <div class="table-scroll">
+      <table id="detailTable">
+        <thead>
+          <tr>
+            <th data-key="id">Ticket ID<span class="arrow"></span></th>
+            <th data-key="date">Date<span class="arrow"></span></th>
+            <th data-key="days">Days<span class="arrow"></span></th>
+            <th data-key="age_group">Age group<span class="arrow"></span></th>
+            <th data-key="status">Status<span class="arrow"></span></th>
+            <th data-key="stage">Update as of Sep 28<span class="arrow"></span></th>
+            <th data-key="owner">Owner<span class="arrow"></span></th>
+            <th data-key="pic">PIC<span class="arrow"></span></th>
+            <th data-key="vendor">Vendor<span class="arrow"></span></th>
+            <th data-key="request_name">Request name<span class="arrow"></span></th>
+            <th data-key="workflow">Workflow<span class="arrow"></span></th>
+            <th data-key="subcategory">Subcategory<span class="arrow"></span></th>
+            <th data-key="subsidiary">Subsidiary<span class="arrow"></span></th>
+            <th data-key="business_unit">Business unit<span class="arrow"></span></th>
+            <th data-key="payment_method">Payment method<span class="arrow"></span></th>
+            <th data-key="amount_usd">Amount (USD)<span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="detailBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer id="footerNote"></footer>
+
+  </main>
+</div>
+</div>
+
+<script>
+/* ============ DATA ============ */
+const TICKETS = [{"id":8741,"date":"2026-09-27","days":1,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Sysco Corporation","request_name":"Sysco Denver Perks Golf Tournament Sponsorship","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":1000.0},{"id":8740,"date":"2026-09-27","days":1,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Alissa Baricanosa [C]","vendor":"Sysco Corporation","request_name":"Sysco- 2026 Sysco Great Lakes Regional GSM Event Sponsorship","workflow":"Request a Purchase / Renewal","subcategory":"Co-branded campaigns, partner marketing, affiliate programs","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":15000.0},{"id":8739,"date":"2026-09-26","days":2,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"APQC","request_name":"APQC Benchmarking Purchase Request","workflow":"Request a Purchase / Renewal","subcategory":"Data and Research Services","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":29000.0},{"id":8734,"date":"2026-09-25","days":3,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Alissa Baricanosa [C]","vendor":"BDO USA, P.C.","request_name":"BDO USA, P.C. - 2026 Privacy Program Assessment & Enhancement","workflow":"Request a Purchase / Renewal","subcategory":"Compliance Consulting Firm","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":183000.0},{"id":8731,"date":"2026-09-25","days":3,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"Catch Hospitality Group","request_name":"NRF - Corner Store (Cloned from ZIP#8639)","workflow":"Request a Purchase / Renewal","subcategory":"Experiential Events","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Virtual card","amount_usd":53566.5},{"id":8726,"date":"2026-09-25","days":3,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Alissa Baricanosa [C]","vendor":"Industry Dive Inc","request_name":"Industry Dive: Q4 '26 Extension for Content Marketing","workflow":"Request a Purchase / Renewal","subcategory":"Content Marketing","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":50000.0},{"id":8723,"date":"2026-09-25","days":3,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Kyle De Silva-Balcita [C]","vendor":"Penguin Random House","request_name":"Penguin Random House Q2 Invoice for UK IM Cookbook Charitable Donation","workflow":"Request a Change Order","subcategory":"Brand Strategy & Identity","subsidiary":"Squareup International Limited","business_unit":"Ireland","payment_method":"Not specified","amount_usd":19527.91},{"id":8720,"date":"2026-09-25","days":3,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Kit Studio","request_name":"Kit Studio - 2026 Q3 Swag","workflow":"Request a Purchase / Renewal","subcategory":"Promotional Material","subsidiary":"Squareup International Limited","business_unit":"Ireland","payment_method":"Purchase order","amount_usd":9285.81},{"id":8716,"date":"2026-09-25","days":3,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"MyPlayer Limited","request_name":"MyPlayer - Sept 2026 MyPlayer Media Kits ","workflow":"Request a Purchase / Renewal","subcategory":"Other Types of Marketing Campaigns","subsidiary":"Square Technologies, Inc","business_unit":"Canada","payment_method":"Purchase order","amount_usd":3591.15},{"id":8713,"date":"2026-09-25","days":3,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Lizzie Barclay","owner":"Roxanne Cruz [C]","vendor":"Kit Studio","request_name":"Kit Studio - 2026 HTE Merch + Booth set up","workflow":"Request a Purchase / Renewal","subcategory":"Promotional Material","subsidiary":"Squareup International Limited","business_unit":"Ireland","payment_method":"Purchase order","amount_usd":5889.18},{"id":8709,"date":"2026-09-25","days":3,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"Briscoes Homewares","request_name":"Briscoes New Zealand - 2026 / 2027 In-Store Activity","workflow":"Request a Purchase / Renewal","subcategory":"Printing & Production","subsidiary":"Afterpay NZ Limited","business_unit":"New Zealand","payment_method":"Not specified","amount_usd":57154.97},{"id":8696,"date":"2026-09-24","days":4,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Reassigned to Tech PIC","pic":"Unassigned","owner":"Kim Irinco [C]","vendor":"First Orion Corp.","request_name":"First Orion 6 Month Renewal","workflow":"Request a Purchase / Renewal","subcategory":"Quality Assurance (QA) & Monitoring","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":150000.0},{"id":8691,"date":"2026-09-24","days":4,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending buyers review","pic":"Unassigned","owner":"Alissa Baricanosa [C]","vendor":"Right Side Up LLC","request_name":"Increased funds to cover marketing support","workflow":"Request a Change Order","subcategory":"Not specified","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":180000.0},{"id":8690,"date":"2026-09-24","days":4,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Crista Palesa [C]","vendor":"Batch Creative LLC","request_name":"2026 Q4 Batch Creative - UGC Videos","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":75000.0},{"id":8689,"date":"2026-09-24","days":4,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Kyle De Silva-Balcita [C]","vendor":"Swamp Motel","request_name":"Swamp Motel - 2026 Lead Gen Brand Activation  ","workflow":"Request a Purchase / Renewal","subcategory":"Experiential Events","subsidiary":"Squareup International Limited","business_unit":"Ireland","payment_method":"Purchase order","amount_usd":34378.4},{"id":8688,"date":"2026-09-24","days":4,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Kim Irinco [C]","vendor":"PwC Holdings No. 21 LLC","request_name":"Change #1 to Work Order: 2nd Line of Defense Validation Support for Internally Developed Models (May 18, 2026 - Oct 31, 2026)","workflow":"Request a Change Order","subcategory":"Contractor or Independent Consultant","subsidiary":"Square Financial Services Inc.","business_unit":"Square Financial Services (US) - 131","payment_method":"Not specified","amount_usd":260000.0},{"id":8681,"date":"2026-09-24","days":4,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Roman y Asociados, S.A.","request_name":"Video testimonial with Mas Sorrer","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Squareup International Limited","business_unit":"Ireland","payment_method":"Purchase order","amount_usd":6834.41},{"id":8680,"date":"2026-09-24","days":4,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Alissa Baricanosa [C]","vendor":"Andytown LLC","request_name":"OAK: Barista Program: Andytown Coffee Roasters","workflow":"Request a Purchase / Renewal","subcategory":"Employee Events (Internal)","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":30000.0},{"id":8671,"date":"2026-09-23","days":5,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Kyle De Silva-Balcita [C]","vendor":"TEN HATS AGENCY","request_name":"Additional Retail Show Aus costs","workflow":"Request a Change Order","subcategory":"Tradeshows & Summits","subsidiary":"Square AU Pty Ltd","business_unit":"Australia","payment_method":"Not specified","amount_usd":62392.28},{"id":8669,"date":"2026-09-23","days":5,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Kim Irinco [C]","vendor":"Cannon Design","request_name":"PROJ127-B_NYC05_New Location- Cannon Design PO","workflow":"Request a Purchase / Renewal","subcategory":"Office Builds (Contractors)","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":235000.0},{"id":8661,"date":"2026-09-23","days":5,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"East Bay Asian Local Development Corporation","request_name":"East Bay Asian Local Development Corporation Gala","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":10000.0},{"id":8656,"date":"2026-09-23","days":5,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor onboarding || Procurement team","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Canyon Connections Services LLC","request_name":"OrigiNativ 2026,","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":10000.0},{"id":8665,"date":"2026-09-23","days":5,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"Decima Digital, Inc.","request_name":"Afterpay Plugin Extension Support - SOW Renewal Q4 2026","workflow":"Request a Purchase / Renewal","subcategory":"IT Consulting Firm","subsidiary":"Afterpay US, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":30754.86},{"id":8663,"date":"2026-09-23","days":5,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"Catch Hospitality Group","request_name":"NRF - 4 Charles","workflow":"Request a Purchase / Renewal","subcategory":"Experiential Events","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Virtual card","amount_usd":88460.94},{"id":8650,"date":"2026-09-23","days":5,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Alissa Baricanosa [C]","vendor":"Optimize IS","request_name":"Optimize IS","workflow":"Request a Contract Termination","subcategory":"Contractor or Independent Consultant","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":228000.0},{"id":8645,"date":"2026-09-23","days":5,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Crista Palesa [C]","vendor":"Kingdumb, Inc","request_name":"Brian Moore - Afterpay Holiday Stunt Concepting ","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":45000.0},{"id":8637,"date":"2026-09-22","days":6,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Crista Palesa [C]","vendor":"Loaded, LLC","request_name":"Open World (Loaded, LLC) - Q4 2026 - Cash App Mobile","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":100000.0},{"id":8628,"date":"2026-09-22","days":6,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Crista Palesa [C]","vendor":"Eleven Labs Inc","request_name":"Cash App x ElevenLabs: Forward Deployed Creative pilot","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":12000.0},{"id":8623,"date":"2026-09-22","days":6,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Kyle De Silva-Balcita [C]","vendor":"Memento Gifts Ltd","request_name":"Memento Gifts Ltd- 2026/SwagStore (France)","workflow":"Request a Purchase / Renewal","subcategory":"Content Marketing","subsidiary":"Squareup International Limited","business_unit":"Ireland","payment_method":"Purchase order","amount_usd":20173.71},{"id":8618,"date":"2026-09-22","days":6,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Alissa Baricanosa [C]","vendor":"BEI Construction, Inc","request_name":"BEI / Additional work OAK Phase 5 ","workflow":"Request a Purchase / Renewal","subcategory":"Other Office Expenses","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":5343.0},{"id":8612,"date":"2026-09-22","days":6,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"Callum McDermott","request_name":"Copy writing \u2013 Good Neighbours s2 \u2013 Callum","workflow":"Request a Purchase / Renewal","subcategory":"Content Marketing","subsidiary":"Square AU Pty Ltd","business_unit":"Australia","payment_method":"Purchase order","amount_usd":16754.21},{"id":8588,"date":"2026-09-21","days":7,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Movement Strategy Center","request_name":"Oakland Fashion Event Sponsorship Payment","workflow":"Request a Purchase / Renewal","subcategory":"Tradeshows & Summits","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":10000.0},{"id":8576,"date":"2026-09-21","days":7,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Andrea Costa","owner":"Alissa Baricanosa [C]","vendor":"Deloitte Tax LLP","request_name":"Increase PO Balance","workflow":"Request a Change Order","subcategory":"Not specified","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":72000.0},{"id":8573,"date":"2026-09-21","days":7,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Smart Works Charity","request_name":"Square sponsorship of Smart Works Somerset House fashion sale","workflow":"Request a Purchase / Renewal","subcategory":"Other Government Expenses","subsidiary":"Squareup International Limited","business_unit":"Ireland","payment_method":"Purchase order","amount_usd":2650.1},{"id":8572,"date":"2026-09-21","days":7,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Smart Works Charity","request_name":"Clearpay sponsorship of Smart Works Somerset House fashion sale","workflow":"Request a Purchase / Renewal","subcategory":"Other Government Expenses","subsidiary":"Clearpay Finance Limited","business_unit":"UK","payment_method":"Purchase order","amount_usd":2650.1},{"id":8571,"date":"2026-09-21","days":7,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Redbrick Enterprises Ltd (Enterprise Nation)","request_name":"Enterprise Nation Tech Hub partnership for Square - additional costs for event with Woburn Partners","workflow":"Request a Purchase / Renewal","subcategory":"Trade and Industry Association Memberships ","subsidiary":"Squareup Europe Limited (UK)","business_unit":"UK","payment_method":"Purchase order","amount_usd":4226.91},{"id":8615,"date":"2026-09-22","days":6,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending legal review","pic":"Claire O'Connor\ufeff","owner":"Kyle De Silva-Balcita [C]","vendor":"1WorldSync, Inc","request_name":"1WS Rich PDP Media","workflow":"Request a Purchase / Renewal","subcategory":"Digital Marketing","subsidiary":"Squareup (UK) Limited","business_unit":"UK","payment_method":"Purchase order","amount_usd":2056.98},{"id":8565,"date":"2026-09-21","days":7,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Kim Irinco [C]","vendor":"PwC Tax Japan","request_name":"PwC Tax Japan 2026 Tax Office Notification Filing","workflow":"Request a Purchase / Renewal","subcategory":"Tax Consulting Firm","subsidiary":"Square Holdings K.K.","business_unit":"Japan","payment_method":"Purchase order","amount_usd":2543.15},{"id":8556,"date":"2026-09-18","days":10,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Kim Irinco [C]","vendor":"Infinite Equity, Inc.","request_name":"Infinite Equity Services September 2026","workflow":"Request a Purchase / Renewal","subcategory":"Other Consulting Services","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":1000.0},{"id":8555,"date":"2026-09-18","days":10,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending legal review","pic":"Mayret De La Torre","owner":"Kim Irinco [C]","vendor":"Praetorian Security, Inc.","request_name":"Praetorian - 2026 Penetration test of Cash App Taxes","workflow":"Request a Purchase / Renewal","subcategory":"Security Consulting Firm","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":75600.0},{"id":8547,"date":"2026-09-18","days":10,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Wild West Social House","request_name":"Wild West Dinner Series Q4","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":30000.0},{"id":8540,"date":"2026-09-18","days":10,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending legal review","pic":"Mayret De La Torre","owner":"Ren Manlulu [C]","vendor":"The Linux Foundation","request_name":"Open Secure AI Alliance ","workflow":"Request a Purchase / Renewal","subcategory":"Trade and Industry Association Memberships ","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":0.0},{"id":8533,"date":"2026-09-18","days":10,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"La Cabra Roastery LLC","request_name":"NYC: Barista Program: La Cabra Roastery LLC","workflow":"Request a Purchase / Renewal","subcategory":"Employee Events (Internal)","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":104000.0},{"id":8531,"date":"2026-09-18","days":10,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Apple Distribution International Ltd.","request_name":"Apple Digital Advertising services","workflow":"Request a Purchase / Renewal","subcategory":"Media","subsidiary":"Clearpay Finance Limited","business_unit":"UK","payment_method":"Purchase order","amount_usd":132504.91},{"id":8529,"date":"2026-09-18","days":10,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending buyers review","pic":"Unassigned","owner":"Kim Irinco [C]","vendor":"The Trustee for Bertie Slippers Trust","request_name":"Retail Aus -  Dinner event ","workflow":"Request a Purchase / Renewal","subcategory":"Experiential Events","subsidiary":"Square AU Pty Ltd","business_unit":"Australia","payment_method":"Purchase order","amount_usd":17637.49},{"id":8530,"date":"2026-09-18","days":10,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Alissa Baricanosa [C]","vendor":"Apple Pty Ltd","request_name":"Apple Digital Advertising services","workflow":"Request a Purchase / Renewal","subcategory":"Media","subsidiary":"Afterpay Australia Pty Ltd","business_unit":"Australia","payment_method":"Purchase order","amount_usd":141099.94},{"id":8528,"date":"2026-09-18","days":10,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor onboarding || Procurement team","pic":"Unassigned","owner":"Crista Palesa [C]","vendor":"Batch Creative LLC","request_name":"Afterpay creative resourcing - paid media","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Afterpay Australia Pty Ltd","business_unit":"Australia","payment_method":"Purchase order","amount_usd":42712.5},{"id":8518,"date":"2026-09-17","days":11,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"Cint USA, Inc.","request_name":"Cint - 2026 Bitcoin Pre/Post-Oct 2026-December 2026","workflow":"Request a Purchase / Renewal","subcategory":"Data and Research Services","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":22400.0},{"id":8508,"date":"2026-09-17","days":11,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Untold Impact","request_name":"Untold BLCK VC: Venture on the Green","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":15000.0},{"id":8480,"date":"2026-09-16","days":12,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Winsight, LLC","request_name":"Winsight - 2027 NRA Sponsorship Change Order","workflow":"Request a Change Order","subcategory":"Tradeshows & Summits","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":128600.0},{"id":8475,"date":"2026-09-16","days":12,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Evyn Staley","owner":"Crista Palesa [C]","vendor":"Christopher Chu","request_name":"Christopher Chu - Photographer - Cash App Social - Tags NYFW 2026","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":12000.0},{"id":8454,"date":"2026-09-16","days":12,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Crista Palesa [C]","vendor":"Naoto Date","request_name":"2026 Case Study: New Photographer","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Square K.K.","business_unit":"Japan","payment_method":"Purchase order","amount_usd":4005.47},{"id":8449,"date":"2026-09-15","days":13,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Alissa Baricanosa [C]","vendor":"Interactive Communications International, Inc.","request_name":"Cash App & Family Dollar Gift Card Rack In-Store Signage","workflow":"Request a Purchase / Renewal","subcategory":"Printing & Production","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":250000.0},{"id":8446,"date":"2026-09-15","days":13,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Gladys Helzberg","owner":"Kim Irinco [C]","vendor":"Interactive Communications International, Inc.","request_name":"Cash App & Family Dollar Aisle Violator Signage","workflow":"Request a Purchase / Renewal","subcategory":"Printing & Production","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":15000.0},{"id":8432,"date":"2026-09-15","days":13,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Crista Palesa [C]","vendor":"Thinkingbox US, Inc.","request_name":"Thinking Box - 2026 Austin GP Production","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":108000.0},{"id":8408,"date":"2026-09-14","days":14,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Kim Irinco [C]","vendor":"PricewaterhouseCoopers Australia","request_name":"PwC - 2026 Australia ESS Statements","workflow":"Request a Purchase / Renewal","subcategory":"Contractor or Independent Consultant","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":89129.31},{"id":8409,"date":"2026-09-14","days":14,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor onboarding || Procurement team","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"Tessolve Semiconductor Private Limited","request_name":"Tessolve Engineers for ATE Support","workflow":"Request a Purchase / Renewal","subcategory":"Other Consulting Services","subsidiary":"Proto Global, LLC","business_unit":"US","payment_method":"Purchase order","amount_usd":38400.0},{"id":8401,"date":"2026-09-14","days":14,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Cahokia PHX, LLC","request_name":"IPD Phx Fest","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":10000.0},{"id":8382,"date":"2026-09-14","days":14,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending legal review","pic":"Mayret De La Torre","owner":"Darwin Cabelin [C]","vendor":"Pollinator Partnership","request_name":"Pollinator.org 2026  Sponsorship Agreement","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":20000.0},{"id":8377,"date":"2026-09-14","days":14,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Allen Lu","owner":"Darwin Cabelin [C]","vendor":"Iterable, Inc.","request_name":"Iterable x Proto","workflow":"Request a Change Order","subcategory":"Marketing Tech / Ad Platforms","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":31564.54},{"id":8367,"date":"2026-09-12","days":16,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor onboarding || Procurement team","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Spreedly, Inc.","request_name":"C-Level Partner: Spreedly for Afterpay","workflow":"Request a Purchase / Renewal","subcategory":"Co-branded campaigns, partner marketing, affiliate programs","subsidiary":"Afterpay US, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":184000.0},{"id":8366,"date":"2026-09-12","days":16,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Turner & Townsend Project Management Ltd","request_name":"PROJ128-B_LON4_Acre- T&T PM services","workflow":"Request a Purchase / Renewal","subcategory":"Office Builds (Contractors)","subsidiary":"Squareup (UK) Limited","business_unit":"UK","payment_method":"Purchase order","amount_usd":157289.96},{"id":8355,"date":"2026-09-11","days":17,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Zerorez","request_name":"Zerorez Conference Sponsorship","workflow":"Request a Purchase / Renewal","subcategory":"Co-branded campaigns, partner marketing, affiliate programs","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":5000.0},{"id":8347,"date":"2026-09-11","days":17,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Chelsea Jang","owner":"Kyle De Silva-Balcita [C]","vendor":"Cannon Design","request_name":"PROJ128-B_LON4_Acre - Cannon Design Inc - CO-01 Amendment","workflow":"Request a Change Order","subcategory":"Other Consulting Services","subsidiary":"Squareup (UK) Limited","business_unit":"UK","payment_method":"Not specified","amount_usd":43000.0},{"id":8356,"date":"2026-09-11","days":17,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending legal review","pic":"Ana Perez","owner":"Kyle De Silva-Balcita [C]","vendor":"TUNE MY MUSIC LTD","request_name":"TuneMyMusic - 2026","workflow":"Request a Purchase / Renewal","subcategory":"Other Types of Marketing Campaigns","subsidiary":"Tidal Music AS","business_unit":"Tidal Norway","payment_method":"Not specified","amount_usd":100711.5},{"id":8336,"date":"2026-09-11","days":17,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending buyers review","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Fairtrade Media Limited","request_name":"LOOP/Fairtrade Media Limited - 2026 - ATHLOS Brand Activation Content Production","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Clearpay Finance Limited","business_unit":"UK","payment_method":"Purchase order","amount_usd":19875.74},{"id":8335,"date":"2026-09-11","days":17,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Serafin Icasiano","owner":"Kim Irinco [C]","vendor":"Association of International Certified Professional Accountants","request_name":"2026 AICPA SEC Conference","workflow":"Request a Purchase / Renewal","subcategory":"Conference (Attendance)","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Virtual card","amount_usd":14600.0},{"id":8333,"date":"2026-09-11","days":17,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Alissa Baricanosa [C]","vendor":"Mform Construction Group Inc.","request_name":"PROJ98-S_TOR10 - Block XYZ TOR-10 Markham_Proto: Cooling - mform QFC 005 Add 2 PDU ","workflow":"Request a Change Order","subcategory":"Not specified","subsidiary":"Square Technologies, Inc","business_unit":"Canada","payment_method":"Not specified","amount_usd":270679.12},{"id":8326,"date":"2026-09-11","days":17,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor onboarding || Procurement team","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"four barrel coffee","request_name":"SF: Barista Program: Four Barrel Coffee","workflow":"Request a Purchase / Renewal","subcategory":"Office Catering","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":67470.0},{"id":8310,"date":"2026-09-10","days":18,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending legal review","pic":"Ana Perez","owner":"Kyle De Silva-Balcita [C]","vendor":"Acceleration Partners, LLC","request_name":"Acceleration Partners Amendment - 2026 Japan Addition","workflow":"Request a Purchase / Renewal","subcategory":"Digital Marketing","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":32176.0},{"id":8309,"date":"2026-09-10","days":18,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor onboarding || Procurement team","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Hacktiv' Studio","request_name":"FR POS Certification ","workflow":"Request a Purchase / Renewal","subcategory":"Compliance Consulting Firm","subsidiary":"Squareup International Limited, Succursale en France","business_unit":"Ireland","payment_method":"Purchase order","amount_usd":11390.69},{"id":8305,"date":"2026-09-10","days":18,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Andrea Acosta","owner":"Alissa Baricanosa [C]","vendor":"PwC US Tax LLP","request_name":"PwC - non-US ad hoc tax advisory services","workflow":"Request a Change Order","subcategory":"Not specified","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":230000.0},{"id":8298,"date":"2026-09-10","days":18,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Spreedly, Inc.","request_name":"C-Level Partner: Spreedly for Cash App Pay","workflow":"Request a Purchase / Renewal","subcategory":"Co-branded campaigns, partner marketing, affiliate programs","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":0.0},{"id":8286,"date":"2026-09-10","days":18,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Chelsea Jang","owner":"Kim Irinco [C]","vendor":"Sterling Infosystems, Inc.","request_name":"Add Funds to PO 85535","workflow":"Request a Change Order","subcategory":"Not specified","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":248529.64},{"id":8261,"date":"2026-09-09","days":19,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor onboarding || Procurement team","pic":"Unassigned","owner":"Crista Palesa [C]","vendor":"Magna Studios","request_name":"Magna Studios - 2026 / Creative Studio Onboard","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":0.0},{"id":8259,"date":"2026-09-09","days":19,"age_group":"Under 30 days","status":"Awaiting approval","stage":"On going review","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"Inside Source Inc","request_name":"PROJ126-B_TOR2_Refresh- Inside Source ","workflow":"Request a Purchase / Renewal","subcategory":"Office Builds (Contractors)","subsidiary":"Square Technologies, Inc","business_unit":"Canada","payment_method":"Purchase order","amount_usd":266135.45},{"id":8249,"date":"2026-09-09","days":19,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Diana jones","owner":"Crista Palesa [C]","vendor":"Colorintech","request_name":"Ai for Everyone in London","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":59627.21},{"id":8231,"date":"2026-09-09","days":19,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Kyle De Silva-Balcita [C]","vendor":"vision australia","request_name":"Vision Australia Help Centre Audit","workflow":"Request a Purchase / Renewal","subcategory":"Customer Experience (CX) Consulting ","subsidiary":"Afterpay Australia Pty Ltd","business_unit":"Australia","payment_method":"Purchase order","amount_usd":9425.12},{"id":8219,"date":"2026-09-08","days":20,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Diana Jones","owner":"Ren Manlulu [C]","vendor":"Crypto Tutors LLC","request_name":"Crypto Tutors Q4 Tour","workflow":"Request a Purchase / Renewal","subcategory":"Other Consulting Services","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":50000.0},{"id":8212,"date":"2026-09-08","days":20,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Blavity, Inc","request_name":"AfroTech Conference Sponsorship","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":83350.0},{"id":8130,"date":"2026-09-04","days":24,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Promo Memento","request_name":"Memento Gifts Ltd- 2026/SwagStore","workflow":"Request a Purchase / Renewal","subcategory":"Printing & Production","subsidiary":"Squareup (UK) Limited","business_unit":"UK","payment_method":"Purchase order","amount_usd":65903.17},{"id":8129,"date":"2026-09-04","days":24,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Bountiful Cow LTD","request_name":"TikTok Shop Live Streams x Beauty ","workflow":"Request a Purchase / Renewal","subcategory":"Social Media","subsidiary":"Clearpay Finance Limited","business_unit":"UK","payment_method":"Purchase order","amount_usd":19875.74},{"id":8117,"date":"2026-09-03","days":25,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor onboarding || Procurement team","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"YMCA of Greater New York","request_name":"YMCA of Greater New York 2026 Northeast Bronx Y Teen Programming Sponsorship","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":15000.0},{"id":8092,"date":"2026-09-03","days":25,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending buyers review","pic":"Unassigned","owner":"Kim Irinco [C]","vendor":"Feenstra Consultancy LLP","request_name":"PO#1014362 Company Code and Currency change","workflow":"Request a Change Order","subcategory":"Contractor or Independent Consultant","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":155428.26},{"id":8093,"date":"2026-09-03","days":25,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Crista Palesa [C]","vendor":"Creator Camp (Camp Studios)","request_name":"Camp Studios - 2026 / Block Signals Production","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":100000.0},{"id":8066,"date":"2026-09-02","days":26,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Sysco Corporation","request_name":"Sysco - 2026 HTX Golf Tournament","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":10000.0},{"id":8056,"date":"2026-09-02","days":26,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending legal review","pic":"Mayret De La Torre","owner":"Ren Manlulu [C]","vendor":"CALGARY FLAMES LIMITED PARTNERSHIP","request_name":"Square CA - 2026 CSEC Amendment ","workflow":"Request a Purchase / Renewal","subcategory":"Content Marketing","subsidiary":"Square Technologies, Inc","business_unit":"Canada","payment_method":"Purchase order","amount_usd":3268.21},{"id":8039,"date":"2026-09-02","days":26,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Forter Pte. Ltd","request_name":"Forter 2026 IMPACT China Event Sponsorship","workflow":"Request a Purchase / Renewal","subcategory":"Tradeshows & Summits","subsidiary":"Afterpay Australia Pty Ltd","business_unit":"Australia","payment_method":"Purchase order","amount_usd":10000.0},{"id":7965,"date":"2026-08-31","days":28,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Roman y Asociados, S.A.","request_name":"LeadGen Creative sendout - Spain","workflow":"Request a Purchase / Renewal","subcategory":"Other Types of Marketing Campaigns","subsidiary":"Squareup International Limited","business_unit":"Ireland","payment_method":"Purchase order","amount_usd":10935.06},{"id":7964,"date":"2026-08-31","days":28,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Kyle De Silva-Balcita [C]","vendor":"Roman y Asociados, S.A.","request_name":"Si chef","workflow":"Request a Purchase / Renewal","subcategory":"Social Media","subsidiary":"Squareup International Limited","business_unit":"Ireland","payment_method":"Purchase order","amount_usd":21642.31},{"id":7926,"date":"2026-08-28","days":31,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending vendor onboarding || Procurement team","pic":"Unassigned","owner":"Kyle De Silva-Balcita [C]","vendor":"Scentre Shopping Centre Management Pty Ltd","request_name":"Scentre Group - 2026 Westfield Holiday Activation","workflow":"Request a Purchase / Renewal","subcategory":"Promotional Material","subsidiary":"Afterpay Australia Pty Ltd","business_unit":"Australia","payment_method":"Purchase order","amount_usd":105824.96},{"id":7816,"date":"2026-08-25","days":34,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Sysco Corporation","request_name":"Sysco Canada 2026 Foodie Summit Presenting Sponsorship","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":70673.88},{"id":7798,"date":"2026-08-24","days":35,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Oracle America, Inc.","request_name":"Oracle Netsuite SuiteWorld 2026","workflow":"Request a Purchase / Renewal","subcategory":"Co-branded campaigns, partner marketing, affiliate programs","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":50000.0},{"id":7709,"date":"2026-08-20","days":39,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Allen Lu","owner":"Roxanne Cruz [C]","vendor":"S.W.I.F.T. SCRL","request_name":"PO Increase","workflow":"Request a Change Order","subcategory":"Other Consulting Services","subsidiary":"Squareup Europe Limited (UK)","business_unit":"UK","payment_method":"Not specified","amount_usd":60468.61},{"id":7693,"date":"2026-08-19","days":40,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"Uleads","request_name":"ULeads - 2026 Affiliate Paid Lead Gen Campaign","workflow":"Request a Purchase / Renewal","subcategory":"Media","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":100000.0},{"id":7657,"date":"2026-08-18","days":41,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Diana Jones","owner":"Darwin Cabelin [C]","vendor":"Monday Girl Ltd.","request_name":"Monday Girl Fall 2026 -2027","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":60000.0},{"id":7634,"date":"2026-08-17","days":42,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending vendor onboarding || Procurement team","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"PHNTM Agency, Inc.","request_name":"TenderFest - 2026 - Cash App / Square Festival Sponsorship","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":100000.0},{"id":7623,"date":"2026-08-17","days":42,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending legal review","pic":"Ana Perez","owner":"Ren Manlulu [C]","vendor":"Nift Networks, Inc.","request_name":"Afterpay US - Nift - User Acquisition","workflow":"Request a Purchase / Renewal","subcategory":"Digital Marketing","subsidiary":"Afterpay US, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":200000.0},{"id":8164,"date":"2026-09-04","days":24,"age_group":"Under 30 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Grace Pak","owner":"Kim Irinco [C]","vendor":"Astreya Partners, Inc.","request_name":"Astreya Procurement Analysis Support (Croatia) - 2026","workflow":"Request a Purchase / Renewal","subcategory":"Other Consulting Services","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":196356.0},{"id":7528,"date":"2026-08-12","days":47,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Chelsea Jang","owner":"Crista Palesa [C]","vendor":"EverFi, LLC","request_name":"EverFi 2026 Renewal ","workflow":"Request a Purchase / Renewal","subcategory":"Co-branded campaigns, partner marketing, affiliate programs","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":140000.0},{"id":7522,"date":"2026-08-12","days":47,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending legal review","pic":"Claire O'Connor\ufeff","owner":"Kyle De Silva-Balcita [C]","vendor":"Fidelius Ltd","request_name":"Fidelius - 2026 UK Benefits Platform ","workflow":"Request a Purchase / Renewal","subcategory":"Benefits","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":30476.13},{"id":7508,"date":"2026-08-12","days":47,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Sysco Corporation","request_name":"Sysco - 2026 North Central August GSM","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":10000.0},{"id":7505,"date":"2026-08-11","days":48,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Sysco Corporation","request_name":"Sysco - 2026 Region GSM, 8/13 RLM & Presentation at Oct 26\u2019 GSM","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":15000.0},{"id":7481,"date":"2026-08-11","days":48,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"CAA Sports, LLC","request_name":"Daniel Ricciardo x Square Australia Neighbor Day","workflow":"Request a Purchase / Renewal","subcategory":"Influencers","subsidiary":"Square AU Pty Ltd","business_unit":"Australia","payment_method":"Purchase order","amount_usd":282199.89},{"id":7468,"date":"2026-08-11","days":48,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Kim Irinco [C]","vendor":"Recess Studios","request_name":"Recess Studios - 2026 Azzi Fudd Basketball Community Activation  ","workflow":"Request a Purchase / Renewal","subcategory":"Experiential Events","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":100000.0},{"id":7467,"date":"2026-08-11","days":48,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending vendor onboarding || Procurement team","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Sysco North Texas","request_name":"Sysco - 2026 Mid-South August GSM","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":15000.0},{"id":7464,"date":"2026-08-11","days":48,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Sysco Central California","request_name":"Sysco - 2026 August All Sales GSM","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":15000.0},{"id":7462,"date":"2026-08-11","days":48,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Sysco Mid Central Region","request_name":"Sysco All GSM Sponsorship - Mid-Central Region","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":12000.0},{"id":7448,"date":"2026-08-11","days":48,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Crista Palesa [C]","vendor":"Protagon Display Inc","request_name":"Sysco OpCo Displays ","workflow":"Request a Purchase / Renewal","subcategory":"Creative & Production","subsidiary":"Square Technologies, Inc","business_unit":"Canada","payment_method":"Purchase order","amount_usd":375000.0},{"id":7451,"date":"2026-08-11","days":48,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Kim Irinco [C]","vendor":"PwC Holdings No. 21 LLC","request_name":"SFS MRM Validation Consultants Q3 2026 - Originations","workflow":"Request a Purchase / Renewal","subcategory":"Contractor or Independent Consultant","subsidiary":"Square Financial Services Inc.","business_unit":"Square Financial Services (US) - 131","payment_method":"Purchase order","amount_usd":170000.0},{"id":7196,"date":"2026-08-04","days":55,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending DRI confirmation","pic":"Unassigned","owner":"Kim Irinco [C]","vendor":"PwC Tax Japan","request_name":"PwC Japan - LERT Consulting Project","workflow":"Request a Purchase / Renewal","subcategory":"Compliance Consulting Firm","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":20000.0},{"id":7149,"date":"2026-08-01","days":58,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending legal review","pic":"Prinka Bedi","owner":"Kyle De Silva-Balcita [C]","vendor":"MightyHive Inc","request_name":"Requesting PO extension & Amend contract ","workflow":"Request a Change Order","subcategory":"Content Marketing","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Not specified","amount_usd":21250.0},{"id":7048,"date":"2026-07-29","days":61,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Alissa Baricanosa [C]","vendor":"PWC LLP","request_name":"Square Canada Inc. - CRA Audit Support","workflow":"Request a Purchase / Renewal","subcategory":"Tax Consulting Firm","subsidiary":"Square Canada Inc.","business_unit":"Canada","payment_method":"Purchase order","amount_usd":53005.41},{"id":6842,"date":"2026-07-22","days":68,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending vendor onboarding || Procurement team","pic":"Unassigned","owner":"Crista Palesa [C]","vendor":"The Information","request_name":"The Information AI Agenda 2026 - Conference","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":250000.0},{"id":6604,"date":"2026-07-15","days":75,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Out for signatures","pic":"Unassigned","owner":"Alissa Baricanosa [C]","vendor":"IntouchCX Inc.","request_name":"InTouch BPO Loans Queue Expansion (AU)","workflow":"Request a Purchase / Renewal","subcategory":"Customer Support Outsourcing","subsidiary":"Square AU Pty Ltd","business_unit":"Australia","payment_method":"Purchase order","amount_usd":0.0},{"id":6585,"date":"2026-07-14","days":76,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending F&S Group Approval and Manager Approval","pic":"Allen Lu","owner":"Ren Manlulu [C]","vendor":"NCC Group Security Services, Inc.","request_name":"NCC Group - 2026 Bitcoin Custody Pentest","workflow":"Request a Purchase / Renewal","subcategory":"Security Consulting Firm","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":100000.0},{"id":5952,"date":"2026-06-22","days":98,"age_group":"30\u2013100 days","status":"Awaiting approval","stage":"Pending legal review","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Suresh Doss","request_name":"Suresh Doss - One Love World Cup Market - Sponsorship","workflow":"Request a Purchase / Renewal","subcategory":"Other Types of Marketing Campaigns","subsidiary":"Square Technologies, Inc","business_unit":"Canada","payment_method":"Purchase order","amount_usd":6360.65},{"id":5744,"date":"2026-06-16","days":104,"age_group":"Over 100 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Darwin Cabelin [C]","vendor":"Oakland Restaurant Collective","request_name":"Oakland Restaurant Collective","workflow":"Request a Purchase / Renewal","subcategory":"Sponsorships","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Virtual card","amount_usd":0.0},{"id":5488,"date":"2026-06-09","days":111,"age_group":"Over 100 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Ren Manlulu [C]","vendor":"Approve it, Inc.","request_name":"Approve IT MX Work Review Under Master Agreement","workflow":"Request a Purchase / Renewal","subcategory":"Compliance Consulting Firm","subsidiary":"Block, Inc.","business_unit":"US","payment_method":"Purchase order","amount_usd":24550.0},{"id":4371,"date":"2026-05-04","days":147,"age_group":"Over 100 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Kyle De Silva-Balcita [C]","vendor":"Securitas Security Services USA, Inc.","request_name":"Securitas Security Services 2026 (UK)","workflow":"Request a Purchase / Renewal","subcategory":"Security","subsidiary":"Squareup (UK) Limited","business_unit":"UK","payment_method":"Purchase order","amount_usd":79502.95},{"id":4223,"date":"2026-04-27","days":154,"age_group":"Over 100 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Concentrix Solutions Corporation","request_name":"Concentrix Squareup International SOW 14","workflow":"Request a Purchase / Renewal","subcategory":"Customer Support Outsourcing","subsidiary":"Squareup International Limited","business_unit":"Ireland","payment_method":"Purchase order","amount_usd":200000.0},{"id":3209,"date":"2026-03-11","days":201,"age_group":"Over 100 days","status":"Awaiting approval","stage":"Pending legal review","pic":"Ana Perez","owner":"Kyle De Silva-Balcita [C]","vendor":"Computec Engineering, Ltd.","request_name":"Computec Engineering Ltd.  Invite billing","workflow":"Request a Purchase / Renewal","subcategory":"Other Office Expenses","subsidiary":"Square K.K.","business_unit":"Japan","payment_method":"Purchase order","amount_usd":635.79},{"id":2631,"date":"2026-02-13","days":227,"age_group":"Over 100 days","status":"Paused","stage":null,"pic":"Unassigned","owner":"Roxanne Cruz [C]","vendor":"Euro-BetriebsPensionsFonds e.V. (EPF)","request_name":"EPF - 2026 - Germany provident fund for pension and risk insurances","workflow":"Request a Purchase / Renewal","subcategory":"Other Insurance Services","subsidiary":"Squareup GmbH","business_unit":"Squareup GmbH (DE) - 317","payment_method":"Purchase order","amount_usd":5427.66},{"id":2376,"date":"2026-02-05","days":235,"age_group":"Over 100 days","status":"Awaiting approval","stage":"Pending vendor confirmation","pic":"Unassigned","owner":"Kim Irinco [C]","vendor":"Diligent Board Services Australia Pty Ltd","request_name":"Add AI usage to Diligent Entities","workflow":"Request a Purchase / Renewal","subcategory":"Legal, Tax, Compliance Tools","subsidiary":"Afterpay Australia Pty Ltd","business_unit":"Australia","payment_method":"Purchase order","amount_usd":0.0}];
+const AGE_ORDER = ["Under 30 days","30\u2013100 days","Over 100 days"];
+const OWNER_MONTH_DATA = {"month_label":"September 2026","counts":{"Darwin Cabelin [C]":34,"Alissa Baricanosa [C]":29,"Roxanne Cruz [C]":26,"Kim Irinco [C]":26,"Ren Manlulu [C]":25,"Crista Palesa [C]":25,"Kyle De Silva-Balcita [C]":22}};
+const AGE_COLORS = { "Under 30 days":"#4C9A8E", "30\u2013100 days":"#C6852E", "Over 100 days":"#B34B33" };
+
+/* ============ HELPERS ============ */
+const fmtUsd = (n, compact=false) => {
+  if (compact) {
+    if (Math.abs(n) >= 1e6) return "$" + (n/1e6).toFixed(2) + "M";
+    if (Math.abs(n) >= 1e3) return "$" + (n/1e3).toFixed(0) + "K";
+  }
+  return "$" + n.toLocaleString(undefined,{maximumFractionDigits:0});
+};
+const pct = (n, total) => total ? ((n/total)*100).toFixed(1) + "%" : "0%";
+const uniqueSorted = (arr, key) => [...new Set(arr.map(t => t[key]).filter(v => v !== null && v !== undefined && v !== ''))].sort((a,b)=>String(a).localeCompare(String(b)));
+
+Chart.register(ChartDataLabels);
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#A7ADBB';
+Chart.defaults.borderColor = '#333D4E';
+Chart.defaults.plugins.datalabels.display = false; // opt in per-chart
+const PALETTE = ['#C6852E','#4C9A8E','#8A6636','#6E7A8F','#B34B33','#7C8AA0','#4A5568','#9C8AA5','#5E9B7A','#B5893D'];
+
+const CHARTS = {};
+function mkChart(id, config){
+  if (CHARTS[id]) CHARTS[id].destroy();
+  CHARTS[id] = new Chart(document.getElementById(id), config);
+  return CHARTS[id];
+}
+
+/* ============ GLOBAL FILTER STATE ============ */
+const FILTER_KEYS = ['fAge','fStage','fOwner','fPic','fWorkflow','fSubcategory','fSubsidiary','fBU','fPM'];
+const filters = { fAge:'all', fStage:'all', fOwner:'all', fPic:'all', fWorkflow:'all', fSubcategory:'all', fSubsidiary:'all', fBU:'all', fPM:'all' };
+const FIELD_BY_FILTER = { fAge:'age_group', fStage:'stage', fOwner:'owner', fPic:'pic', fWorkflow:'workflow', fSubcategory:'subcategory', fSubsidiary:'subsidiary', fBU:'business_unit', fPM:'payment_method' };
+
+function matchesFilters(t, ignore=[]){
+  for (const key of FILTER_KEYS){
+    if (ignore.includes(key)) continue;
+    const val = filters[key];
+    if (val === 'all') continue;
+    if (t[FIELD_BY_FILTER[key]] !== val) return false;
+  }
+  return true;
+}
+function searchTerm(){ return document.getElementById('fSearch').value.trim().toLowerCase(); }
+function matchesSearch(t, term){
+  if (!term) return true;
+  const hay = [t.id,t.vendor,t.pic,t.owner,t.request_name,t.workflow,t.subcategory,t.subsidiary,t.business_unit,t.stage].join(' ').toLowerCase();
+  return hay.includes(term);
+}
+function filteredTickets(ignore=[]){
+  const term = searchTerm();
+  return TICKETS.filter(t => matchesFilters(t, ignore) && matchesSearch(t, term));
+}
+
+/* ============ FILTER UI ============ */
+function populateFilterOptions(){
+  const map = {
+    fAge: AGE_ORDER, fStage: uniqueSorted(TICKETS,'stage'), fOwner: uniqueSorted(TICKETS,'owner'), fPic: uniqueSorted(TICKETS,'pic'),
+    fWorkflow: uniqueSorted(TICKETS,'workflow'), fSubcategory: uniqueSorted(TICKETS,'subcategory'),
+    fSubsidiary: uniqueSorted(TICKETS,'subsidiary'), fBU: uniqueSorted(TICKETS,'business_unit'), fPM: uniqueSorted(TICKETS,'payment_method')
+  };
+  Object.entries(map).forEach(([id, values]) => {
+    const sel = document.getElementById(id);
+    values.forEach(v => { const opt = document.createElement('option'); opt.value=v; opt.textContent=v; sel.appendChild(opt); });
+  });
+  FILTER_KEYS.forEach(id => {
+    document.getElementById(id).addEventListener('change', (e) => { filters[id] = e.target.value; renderAll(); });
+  });
+  document.getElementById('fSearch').addEventListener('input', renderAll);
+  document.getElementById('ownerSearch').addEventListener('input', (e) => {
+    ownerSearchTerm = e.target.value.trim().toLowerCase();
+    renderOwnerSection(filteredTickets());
+  });
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    FILTER_KEYS.forEach(id => { filters[id] = 'all'; document.getElementById(id).value = 'all'; });
+    document.getElementById('fSearch').value = '';
+    renderAll();
+  });
+}
+function setFilter(id, value){
+  filters[id] = value;
+  const sel = document.getElementById(id);
+  if (sel) sel.value = value;
+  renderAll();
+  document.getElementById('detailTable').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* ============ HEADLINE CARDS ============ */
+function renderHeadline(pool){
+  const total = pool.length;
+  const groupCount = g => pool.filter(t => t.age_group === g).length;
+  const groupUsd = g => pool.filter(t => t.age_group === g).reduce((s,t)=>s+t.amount_usd,0);
+  const over30 = pool.filter(t => t.days !== null && t.days > 30);
+  const over100 = pool.filter(t => t.age_group === "Over 100 days");
+  const totalUsd = pool.reduce((s,t)=>s+t.amount_usd,0);
+  const over30Usd = over30.reduce((s,t)=>s+t.amount_usd,0);
+  const over100Usd = over100.reduce((s,t)=>s+t.amount_usd,0);
+
+  const cards = [
+    { label:"Total open tickets", value: total.toLocaleString(), cls:"" },
+    { label:"Under 30 days", value: groupCount("Under 30 days"), pct: pct(groupCount("Under 30 days"), total), cls:"teal" },
+    { label:"30\u2013100 days", value: groupCount("30\u2013100 days"), pct: pct(groupCount("30\u2013100 days"), total), cls:"amber" },
+    { label:"Over 100 days", value: groupCount("Over 100 days"), pct: pct(groupCount("Over 100 days"), total), cls:"rust" },
+    { label:"Over 30 days (Days > 30)", value: over30.length, pct: pct(over30.length, total), cls:"amber" },
+    { label:"Total open value", value: fmtUsd(totalUsd, true), cls:"" },
+    { label:"Value, Days > 30", value: fmtUsd(over30Usd, true), cls:"amber" },
+    { label:"Value, Over 100 days", value: fmtUsd(over100Usd, true), cls:"rust" },
+  ];
+  document.getElementById('headlineCards').innerHTML = cards.map(c => `
+    <div class="stat" ${c.label.startsWith('Over 30') ? 'title="Strictly Days > 30 — a ticket at exactly 30 days is excluded from this figure, though it still counts in the 30\u2013100 day chart group."' : ''}>
+      <div class="label">${c.label}</div>
+      <div class="value ${c.cls}">${c.value}</div>
+      ${c.pct ? `<div class="pct">${c.pct} of filtered total</div>` : ''}
+    </div>`).join('');
+}
+
+/* ============ PENDING STATUS SUMMARY (stacked horizontal) ============ */
+function renderStatusSummary(pool){
+  const updated = pool.filter(t => t.stage);
+  const stages = uniqueSorted(updated, 'stage');
+  const rows = stages.map(stage => {
+    const rows = updated.filter(t => t.stage === stage);
+    const seg = {}; AGE_ORDER.forEach(g => seg[g] = rows.filter(t=>t.age_group===g).length);
+    return { stage, total: rows.length, seg };
+  }).sort((a,b) => b.total - a.total);
+
+  mkChart('statusSummaryChart', {
+    type:'bar',
+    data:{
+      labels: rows.map(r=>r.stage),
+      datasets: AGE_ORDER.map(g => ({
+        label:g, backgroundColor:AGE_COLORS[g], borderRadius:2,
+        data: rows.map(r=>r.seg[g])
+      }))
+    },
+    options:{
+      indexAxis:'y', responsive:true,
+      plugins:{
+        legend:{ position:'top', labels:{boxWidth:10,boxHeight:10} },
+        tooltip:{ callbacks:{ label:(ctx)=> `${ctx.dataset.label}: ${ctx.parsed.x} tickets` } },
+        datalabels:{
+          display:(ctx)=> ctx.datasetIndex === AGE_ORDER.length-1,
+          formatter:(v,ctx)=> rows[ctx.dataIndex].total,
+          anchor:'end', align:'end', color:'#ECE7DB', font:{size:11,weight:'600'}
+        }
+      },
+      scales:{ x:{ stacked:true, beginAtZero:true, grid:{color:'#2A3240'} }, y:{ stacked:true, grid:{display:false}, ticks:{autoSkip:false, font:{size:10.5}} } },
+      onClick:(evt, els)=>{
+        if(!els.length) return;
+        const el = els[0];
+        const stage = rows[el.index].stage;
+        const ageGroup = AGE_ORDER[el.datasetIndex];
+        setFilter('fStage', stage);
+        setFilter('fAge', ageGroup);
+      }
+    }
+  });
+}
+
+/* ============ AGING PIE CHARTS (count & USD by age group) ============ */
+function renderStackedCharts(pool){
+  const counts = AGE_ORDER.map(g => pool.filter(t=>t.age_group===g).length);
+  const totalCount = counts.reduce((a,b)=>a+b,0);
+  mkChart('stackedAgeChart', {
+    type:'pie',
+    data:{ labels: AGE_ORDER, datasets:[{ data: counts, backgroundColor: AGE_ORDER.map(g=>AGE_COLORS[g]) }] },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{ position:'bottom', labels:{boxWidth:9,boxHeight:9,font:{size:10}} },
+        tooltip:{ callbacks:{ label:(ctx)=> `${ctx.label}: ${ctx.parsed} tickets (${pct(ctx.parsed,totalCount)})` } },
+        datalabels:{ display:true, color:'#151A22', font:{size:11,weight:'600'}, formatter:(v)=> pct(v,totalCount) }
+      },
+      onClick:(evt, els)=>{ if(els.length){ setFilter('fAge', AGE_ORDER[els[0].index]); } }
+    }
+  });
+
+  const usds = AGE_ORDER.map(g => pool.filter(t=>t.age_group===g).reduce((s,t)=>s+t.amount_usd,0));
+  const totalUsd = usds.reduce((a,b)=>a+b,0);
+  mkChart('stackedUsdChart', {
+    type:'pie',
+    data:{ labels: AGE_ORDER, datasets:[{ data: usds, backgroundColor: AGE_ORDER.map(g=>AGE_COLORS[g]) }] },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{ position:'bottom', labels:{boxWidth:9,boxHeight:9,font:{size:10}} },
+        tooltip:{ callbacks:{ label:(ctx)=> `${ctx.label}: ${fmtUsd(ctx.parsed, false)} (${pct(ctx.parsed,totalUsd)})` } },
+        datalabels:{ display:true, color:'#151A22', font:{size:11,weight:'600'}, formatter:(v)=> pct(v,totalUsd) }
+      },
+      onClick:(evt, els)=>{ if(els.length){ setFilter('fAge', AGE_ORDER[els[0].index]); } }
+    }
+  });
+}
+
+/* ============ PIE / DOUGHNUT COMPOSITION CHARTS ============ */
+const COMP_DEFS = [
+  { canvas:'pieWorkflow', key:'workflow', filterId:'fWorkflow', otherId:null, type:'line' },
+  { canvas:'piePM', key:'payment_method', filterId:'fPM', otherId:null, type:'line' },
+  { canvas:'dnSubsidiary', key:'subsidiary', filterId:'fSubsidiary', otherId:'otherSubsidiary', type:'doughnut' },
+  { canvas:'dnSubcategory', key:'subcategory', filterId:'fSubcategory', otherId:'otherSubcategory', type:'doughnut' },
+  { canvas:'dnBU', key:'business_unit', filterId:'fBU', otherId:'otherBU', type:'doughnut' },
+];
+
+function buildCompData(pool, key, topN=6){
+  const counts = {};
+  pool.forEach(t => { const v = t[key] || 'Not specified'; counts[v] = (counts[v]||0) + 1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const top = entries.slice(0, topN);
+  const rest = entries.slice(topN);
+  const otherTotal = rest.reduce((s,[,v])=>s+v,0);
+  const labels = top.map(e=>e[0]);
+  const data = top.map(e=>e[1]);
+  if (otherTotal > 0){ labels.push('Other'); data.push(otherTotal); }
+  return { labels, data, otherLabels: rest.map(([l,v])=>`${l} (${v})`), total: pool.length };
+}
+
+function renderComposition(pool){
+  COMP_DEFS.forEach(def => {
+    const topN = def.type === 'line' ? 20 : 6;
+    const { labels, data, otherLabels, total } = buildCompData(pool, def.key, topN);
+
+    if (def.type === 'line'){
+      mkChart(def.canvas, {
+        type:'line',
+        data:{ labels, datasets:[{ data, borderColor:'#C6852E', backgroundColor:'#C6852E', pointRadius:5, pointHoverRadius:7, pointBackgroundColor:'#C6852E', tension:0, fill:false }] },
+        options:{
+          responsive:true,
+          interaction:{ mode:'nearest', intersect:true },
+          plugins:{
+            legend:{ display:false },
+            tooltip:{ callbacks:{ label:(ctx)=> `${ctx.label}: ${ctx.parsed.y} tickets (${pct(ctx.parsed.y,total)})` } },
+            datalabels:{ display:false }
+          },
+          scales:{ x:{ grid:{display:false}, ticks:{autoSkip:false, font:{size:10}, maxRotation:40, minRotation:0} }, y:{ beginAtZero:true, grid:{color:'#2A3240'} } },
+          onClick:(evt, els)=>{ if(els.length){ setFilter(def.filterId, labels[els[0].index]); } }
+        }
+      });
+      return;
+    }
+
+    mkChart(def.canvas, {
+      type: def.type,
+      data:{ labels, datasets:[{ data, backgroundColor: PALETTE.slice(0,labels.length) }] },
+      options:{
+        responsive:true,
+        plugins:{
+          legend:{ position:'left', align:'start', labels:{ boxWidth:10, boxHeight:10, font:{size:10} } },
+          tooltip:{ callbacks:{ label:(ctx)=> `${ctx.label}: ${ctx.parsed} (${pct(ctx.parsed,total)})` } },
+          datalabels:{
+            display:true, color:'#151A22', font:{size:10.5,weight:'600'},
+            formatter:(v)=> pct(v,total)
+          }
+        },
+        onClick:(evt, els)=>{
+          if(!els.length) return;
+          const label = labels[els[0].index];
+          if (label === 'Other'){ document.getElementById(def.otherId).classList.add('open'); return; }
+          setFilter(def.filterId, label);
+        }
+      }
+    });
+    const otherEl = document.getElementById(def.otherId);
+    const noteEl = document.querySelector(`.other-note[data-target="${def.otherId}"]`);
+    if (otherLabels.length){ otherEl.innerHTML = otherLabels.map(l=>`<span>${l}</span>`).join(''); noteEl.style.display='block'; }
+    else { otherEl.innerHTML=''; noteEl.style.display='none'; }
+  });
+}
+document.querySelectorAll('.other-note').forEach(el => {
+  el.addEventListener('click', () => document.getElementById(el.dataset.target).classList.toggle('open'));
+});
+
+/* ============ PENDING-STAGE SECTIONS ============ */
+const STAGE_DEFS = {
+  fands: { exact: "Pending F&S Group Approval and Manager Approval", chart:'fandsChart', table:'fandsTable', sub:'fandsSub' },
+  legal: { exact: "Pending legal review", chart:'legalChart', table:'legalTable', sub:'legalSub' },
+  vendor: { exact: "Pending vendor confirmation", chart:'vendorChart', table:'vendorTable', sub:'vendorSub' }
+};
+
+function renderStageSection(key, basePool){
+  const def = STAGE_DEFS[key];
+  const rows = basePool.filter(t => t.stage === def.exact);
+  document.getElementById(def.sub).textContent = `${rows.length} tickets waiting on this stage (within current filters)`;
+
+  if (key === 'vendor'){
+    const byVendor = uniqueSorted(rows, 'vendor');
+    const vendorRows = byVendor.map(v => {
+      const vRows = rows.filter(t=>t.vendor===v);
+      const seg = {}; AGE_ORDER.forEach(g => seg[g] = vRows.filter(t=>t.age_group===g).length);
+      const oldest = Math.max(...vRows.map(t=>t.days ?? 0));
+      return { vendor:v, total: vRows.length, oldest, seg };
+    }).sort((a,b) => b.total - a.total || b.oldest - a.oldest);
+
+    const datasets = AGE_ORDER.map(g => ({ label:g, backgroundColor:AGE_COLORS[g], borderRadius:2,
+      data: vendorRows.map(r => r.seg[g]) }));
+    mkChart(def.chart, {
+      type:'bar',
+      data:{ labels: vendorRows.map(r=>r.vendor), datasets },
+      options:{
+        indexAxis:'y', responsive:true,
+        plugins:{
+          legend:{position:'top', labels:{boxWidth:10,boxHeight:10,font:{size:10.5}}},
+          tooltip:{ callbacks:{ label:(ctx)=> `${ctx.dataset.label}: ${ctx.parsed.x} tickets` } },
+          datalabels:{
+            display:(ctx)=> ctx.datasetIndex === AGE_ORDER.length-1,
+            formatter:(v,ctx)=> vendorRows[ctx.dataIndex].total,
+            anchor:'end', align:'end', color:'#ECE7DB', font:{size:10.5,weight:'600'}
+          }
+        },
+        scales:{ x:{ stacked:true, beginAtZero:true, grid:{color:'#2A3240'} }, y:{ stacked:true, grid:{display:false}, ticks:{autoSkip:false, font:{size:10}} } },
+        onClick:(evt, els)=>{
+          if(!els.length) return;
+          setFilter('fAge', AGE_ORDER[els[0].datasetIndex]);
+          document.getElementById('fSearch').value = vendorRows[els[0].index].vendor;
+          renderAll();
+        }
+      }
+    });
+  } else {
+    const picRows = uniqueSorted(rows, 'pic').map(p => ({ pic:p, total: rows.filter(t=>t.pic===p).length }))
+      .sort((a,b) => b.total - a.total);
+    const pics = picRows.map(r=>r.pic);
+    const datasets = AGE_ORDER.map(g => ({ label:g, backgroundColor:AGE_COLORS[g], borderRadius:2,
+      data: pics.map(p => rows.filter(t=>t.pic===p && t.age_group===g).length) }));
+    mkChart(def.chart, {
+      type:'bar',
+      data:{ labels: pics, datasets },
+      options:{ responsive:true, plugins:{ legend:{position:'top', labels:{boxWidth:10,boxHeight:10,font:{size:10.5}}} },
+        scales:{ x:{ stacked:true, grid:{display:false}, ticks:{autoSkip:false, font:{size:10.5}} }, y:{ stacked:true, beginAtZero:true, grid:{color:'#2A3240'} } },
+        onClick:(evt, els)=>{
+          if(!els.length) return;
+          setFilter('fPic', pics[els[0].index]);
+          setFilter('fAge', AGE_ORDER[els[0].datasetIndex]);
+        } }
+    });
+  }
+
+  const tbl = document.getElementById(def.table);
+  const cols = key === 'vendor'
+    ? [['vendor','Vendor'],['id','Ticket ID'],['pic','PIC'],['owner','Owner'],['days','Days'],['age_group','Age group'],['amount_usd','Amount (USD)']]
+    : [['pic','PIC'],['vendor','Vendor'],['id','Ticket ID'],['owner','Owner'],['days','Days'],['age_group','Age group'],['amount_usd','Amount (USD)']];
+  let sortState = tbl._sortState || { key:'days', dir:-1 };
+  tbl._sortState = sortState;
+  const sorted = [...rows].sort((a,b) => {
+    const av=a[sortState.key], bv=b[sortState.key];
+    if (typeof av === 'number') return (av-bv)*sortState.dir;
+    return String(av??'').localeCompare(String(bv??'')) * sortState.dir;
+  });
+  tbl.innerHTML = '';
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr>' + cols.map(([k,label]) => `<th data-key="${k}">${label}<span class="arrow">${sortState.key===k ? (sortState.dir===1?'\u2191':'\u2193') : ''}</span></th>`).join('') + '</tr>';
+  const tbody = document.createElement('tbody');
+  tbody.innerHTML = sorted.map(t => '<tr>' + cols.map(([k]) => {
+    if (k==='pic') return `<td class="click" data-role="pic-link">${t.pic}</td>`;
+    if (k==='owner') return `<td class="click" data-role="owner-link">${t.owner}</td>`;
+    if (k==='vendor' && key !== 'vendor') return `<td>${t.vendor}</td>`;
+    if (k==='vendor') return `<td class="click" data-role="vendor-link">${t.vendor}</td>`;
+    if (k==='amount_usd') return `<td class="num">${fmtUsd(t.amount_usd)}</td>`;
+    if (k==='days') return `<td class="num">${t.days}</td>`;
+    return `<td>${t[k]}</td>`;
+  }).join('') + '</tr>').join('');
+  tbl.appendChild(thead); tbl.appendChild(tbody);
+
+  thead.querySelectorAll('th').forEach(th => {
+    th.addEventListener('click', () => {
+      const k = th.dataset.key;
+      tbl._sortState = { key:k, dir: (tbl._sortState.key===k ? -tbl._sortState.dir : 1) };
+      renderStageSection(key, filteredTickets(['fStage']));
+    });
+  });
+  tbody.querySelectorAll('[data-role="pic-link"]').forEach((el,i) => el.addEventListener('click', () => setFilter('fPic', sorted[i].pic)));
+  tbody.querySelectorAll('[data-role="owner-link"]').forEach((el,i) => el.addEventListener('click', () => setFilter('fOwner', sorted[i].owner)));
+  tbody.querySelectorAll('[data-role="vendor-link"]').forEach((el,i) => el.addEventListener('click', () => {
+    document.getElementById('fSearch').value = sorted[i].vendor; renderAll();
+  }));
+}
+
+/* ============ OWNER DETAILS ============ */
+let currentOwner = null;
+let ownerSearchTerm = '';
+function ownerStats(pool, owner){
+  const rows = pool.filter(t => t.owner === owner);
+  const groupCount = g => rows.filter(t => t.age_group === g).length;
+  const over30 = rows.filter(t => t.days !== null && t.days > 30);
+  const over100 = rows.filter(t => t.age_group === "Over 100 days");
+  const totalUsd = rows.reduce((s,t)=>s+t.amount_usd,0);
+  return { rows, total: rows.length,
+    under30: groupCount("Under 30 days"), d30to100: groupCount("30\u2013100 days"), over100: groupCount("Over 100 days"),
+    over30Count: over30.length, over30Usd: over30.reduce((s,t)=>s+t.amount_usd,0),
+    over100Count: over100.length, over100Usd: over100.reduce((s,t)=>s+t.amount_usd,0), totalUsd };
+}
+
+/* ============ OWNER UTILIZATION (tickets received this month) ============ */
+function renderOwnerUtilization(){
+  const entries = Object.entries(OWNER_MONTH_DATA.counts).sort((a,b) => b[1]-a[1]);
+  const total = entries.reduce((s,[,v]) => s+v, 0);
+  const pctVals = entries.map(([,v]) => Math.round((v/total)*1000)/10); // one decimal
+  document.getElementById('utilizationSub').textContent =
+    `Each owner's share of the ${total} tickets received in ${OWNER_MONTH_DATA.month_label}, any status, by intake date \u2014 not limited to currently pending tickets.`;
+  mkChart('ownerUtilizationChart', {
+    type:'bar',
+    data:{
+      labels: entries.map(e=>e[0]),
+      datasets:[{ data: pctVals, backgroundColor: PALETTE[0], borderRadius:2 }]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:(ctx)=> `${entries[ctx.dataIndex][1]} tickets (${ctx.parsed.y}%) of ${total} received in ${OWNER_MONTH_DATA.month_label}` } },
+        datalabels:{ display:true, anchor:'end', align:'end', color:'#ECE7DB', font:{size:11,weight:'600'}, formatter:(v)=> v + '%' }
+      },
+      scales:{
+        y:{ beginAtZero:true, grid:{color:'#2A3240'}, ticks:{ callback:(v)=> v + '%' } },
+        x:{ grid:{display:false}, ticks:{autoSkip:false, font:{size:10.5}} }
+      },
+      onClick:(evt, els)=>{ if(els.length){ setFilter('fOwner', entries[els[0].index][0]); } }
+    }
+  });
+}
+
+function renderOwnerSection(pool){
+  const owners = uniqueSorted(pool, 'owner');
+  const counts = {}; pool.forEach(t => counts[t.owner] = (counts[t.owner]||0)+1);
+  const sorted = [...owners].sort((a,b)=>counts[b]-counts[a]);
+  const visible = sorted.filter(o => o.toLowerCase().includes(ownerSearchTerm));
+  document.getElementById('ownerPillbar').innerHTML = visible.map(o => `<button data-owner="${o}">${o} (${counts[o]})</button>`).join('') || '<span class="section-sub" style="margin:0;">No owners match "' + ownerSearchTerm + '"</span>';
+  document.querySelectorAll('#ownerPillbar button').forEach(btn => btn.addEventListener('click', () => { currentOwner = btn.dataset.owner; renderOwnerSection(filteredTickets()); }));
+
+  if (!currentOwner || !sorted.includes(currentOwner)) currentOwner = sorted[0] || null;
+  document.querySelectorAll('#ownerPillbar button').forEach(b => b.classList.toggle('active', b.dataset.owner===currentOwner));
+
+  if (!currentOwner){
+    document.getElementById('ownerCards').innerHTML = '';
+    document.getElementById('ownerTableTitle').textContent = 'No owners match the current filters';
+    document.getElementById('ownerTable').innerHTML = '';
+    return;
+  }
+
+  const s = ownerStats(pool, currentOwner);
+  const receivedThisMonth = OWNER_MONTH_DATA.counts[currentOwner] || 0;
+  const monthTotal = Object.values(OWNER_MONTH_DATA.counts).reduce((a,b)=>a+b,0);
+  const cards = [
+    { label:"Open tickets", value: s.total, cls:"" },
+    { label:`Received, ${OWNER_MONTH_DATA.month_label}`, value: receivedThisMonth, pct: pct(receivedThisMonth, monthTotal) + ' of month\'s intake', cls:"teal" },
+    { label:"Under 30 days", value: s.under30, pct: pct(s.under30, s.total), cls:"teal" },
+    { label:"30\u2013100 days", value: s.d30to100, pct: pct(s.d30to100, s.total), cls:"amber" },
+    { label:"Over 100 days", value: s.over100, pct: pct(s.over100, s.total), cls:"rust" },
+    { label:"Days > 30", value: s.over30Count, cls:"amber" },
+    { label:"Value, Days > 30", value: fmtUsd(s.over30Usd, true), cls:"amber" },
+    { label:"Value, Over 100 days", value: fmtUsd(s.over100Usd, true), cls:"rust" },
+    { label:"Total open value", value: fmtUsd(s.totalUsd, true), cls:"" },
+  ];
+  document.getElementById('ownerCards').innerHTML = cards.map(c => `
+    <div class="stat"><div class="label">${c.label}</div><div class="value ${c.cls}">${c.value}</div>${c.pct?`<div class="pct">${c.pct}</div>`:''}</div>`).join('');
+  document.getElementById('ownerTableTitle').textContent = `Open tickets \u2014 ${currentOwner}`;
+
+  const tbl = document.getElementById('ownerTable');
+  const cols = [['id','Ticket ID'],['vendor','Vendor'],['status','Status'],['stage','Update as of Sep 28'],['pic','PIC'],['days','Days'],['age_group','Age group'],['amount_usd','Amount (USD)']];
+  let sortState = tbl._sortState || { key:'days', dir:-1 };
+  tbl._sortState = sortState;
+  const sortedRows = [...s.rows].sort((a,b) => {
+    const av=a[sortState.key], bv=b[sortState.key];
+    if (typeof av === 'number') return (av-bv)*sortState.dir;
+    return String(av??'').localeCompare(String(bv??'')) * sortState.dir;
+  });
+  tbl.innerHTML = '';
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr>' + cols.map(([k,label]) => `<th data-key="${k}">${label}<span class="arrow">${sortState.key===k ? (sortState.dir===1?'\u2191':'\u2193') : ''}</span></th>`).join('') + '</tr>';
+  const tbody = document.createElement('tbody');
+  tbody.innerHTML = sortedRows.map(t => '<tr>' + cols.map(([k]) => {
+    if (k==='amount_usd') return `<td class="num">${fmtUsd(t.amount_usd)}</td>`;
+    if (k==='days') return `<td class="num">${t.days}</td>`;
+    if (k==='stage') return `<td><span class="status-pill">${t.stage ?? '\u2014'}</span></td>`;
+    return `<td>${t[k] ?? '\u2014'}</td>`;
+  }).join('') + '</tr>').join('');
+  tbl.appendChild(thead); tbl.appendChild(tbody);
+  thead.querySelectorAll('th').forEach(th => th.addEventListener('click', () => {
+    const k = th.dataset.key;
+    tbl._sortState = { key:k, dir: (tbl._sortState.key===k ? -tbl._sortState.dir : 1) };
+    renderOwnerSection(filteredTickets());
+  }));
+}
+
+/* ============ DETAIL TABLE ============ */
+let detailSort = { key:'days', dir:-1 };
+function renderDetailTable(pool){
+  const sorted = [...pool].sort((a,b) => {
+    const av=a[detailSort.key], bv=b[detailSort.key];
+    if (typeof av === 'number') return (av-bv)*detailSort.dir;
+    return String(av??'').localeCompare(String(bv??'')) * detailSort.dir;
+  });
+  document.getElementById('filterCount').textContent = `${pool.length} of ${TICKETS.length} pending tickets match`;
+  const cols = ['id','date','days','age_group','status','stage','owner','pic','vendor','request_name','workflow','subcategory','subsidiary','business_unit','payment_method','amount_usd'];
+  document.getElementById('detailBody').innerHTML = sorted.map(t => '<tr>' + cols.map(k => {
+    if (k==='amount_usd') return `<td class="num">${fmtUsd(t.amount_usd)}</td>`;
+    if (k==='days') return `<td class="num">${t.days}</td>`;
+    if (k==='request_name') return `<td class="name-cell">${t.request_name}</td>`;
+    if (k==='stage') return `<td><span class="status-pill">${t.stage ?? '\u2014'}</span></td>`;
+    return `<td>${t[k] ?? '\u2014'}</td>`;
+  }).join('') + '</tr>').join('');
+  document.querySelectorAll('#detailTable thead th').forEach(th => {
+    const span = th.querySelector('.arrow');
+    span.textContent = detailSort.key === th.dataset.key ? (detailSort.dir===1?'\u2191':'\u2193') : '';
+  });
+}
+document.querySelectorAll('#detailTable thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const k = th.dataset.key;
+    detailSort = { key:k, dir: (detailSort.key===k ? -detailSort.dir : 1) };
+    renderAll();
+  });
+});
+
+/* ============ MASTER RENDER ============ */
+function renderAll(){
+  const pool = filteredTickets();
+  renderHeadline(pool);
+  renderStatusSummary(pool);
+  renderStackedCharts(pool);
+  renderComposition(pool);
+  Object.keys(STAGE_DEFS).forEach(key => renderStageSection(key, filteredTickets(['fStage'])));
+  renderOwnerSection(pool);
+  renderDetailTable(pool);
+}
+
+/* ============ EMAIL PANEL ============ */
+function isHostedUrl(v){ return /^https?:\/\/.+/i.test((v||'').trim()); }
+
+function buildFilteredLink(base){
+  if (!isHostedUrl(base)) return base;
+  const params = new URLSearchParams();
+  FILTER_KEYS.forEach(k => { if (filters[k] !== 'all') params.set(k, filters[k]); });
+  const term = searchTerm();
+  if (term) params.set('q', term);
+  const qs = params.toString();
+  const trimmed = base.trim();
+  return qs ? `${trimmed}${trimmed.includes('?') ? '&' : '?'}${qs}` : trimmed;
+}
+
+function buildReportSummary(reportLink){
+  const s = emailStats();
+  const linkLine = isHostedUrl(reportLink)
+    ? `View the interactive charts, pending-stage details, owner breakdowns, and ticket list here (your current filters are included in the link): ${buildFilteredLink(reportLink)}`
+    : `[Please provide a hosted https:// link to this report before sending \u2014 a local file path won't work for recipients]`;
+
+  return `Hi Ange/Donata,
+
+Good day, Here is the current summary of open ZIP tickets for Manila${s.filtered ? ' (filtered view)' : ''}:
+
+\u2022 Under 30 days: ${s.under30Count}
+\u2022 30\u2013100 days: ${s.d30to100Count}
+\u2022 Over 100 days: ${s.over100Count}
+\u2022 Tickets over 30 days: ${s.over30Count}, totaling ${fmtUsd(s.over30Usd)}
+\u2022 Tickets over 100 days: ${s.over100Count}, totaling ${fmtUsd(s.over100Usd)}
+
+Pending-stage breakdown:
+\u2022 F&S Group + Manager Approval: ${s.fandsCount}
+\u2022 Legal review: ${s.legalCount}
+\u2022 Vendor confirmation: ${s.vendorCount}
+
+Dashboard snapshot: ${s.total} open tickets across ${s.ownerCount} owner${s.ownerCount===1?'':'s'}, totaling ${fmtUsd(s.totalUsd)}.${s.topWorkflow ? ` Most common workflow: ${s.topWorkflow[0]} (${s.topWorkflow[1]} tickets).` : ''}${s.topSubsidiary ? ` Top subsidiary: ${s.topSubsidiary[0]} (${s.topSubsidiary[1]}).` : ''}${s.topBusinessUnit ? ` Top business unit: ${s.topBusinessUnit[0]} (${s.topBusinessUnit[1]}).` : ''}
+
+${linkLine}
+
+Best regards,
+[Your Name]`;
+}
+
+function emailStats(){
+  const pool = filteredTickets();
+  const total = pool.length;
+  const groupCount = g => pool.filter(t => t.age_group === g).length;
+  const groupUsd = g => pool.filter(t => t.age_group === g).reduce((s,t)=>s+t.amount_usd,0);
+  const over30 = pool.filter(t => t.days !== null && t.days > 30);
+  const over100 = pool.filter(t => t.age_group === "Over 100 days");
+  const totalUsd = pool.reduce((s,t)=>s+t.amount_usd,0);
+  const ownerCounts = {}; pool.forEach(t => ownerCounts[t.owner] = (ownerCounts[t.owner]||0)+1);
+  const topOwner = Object.entries(ownerCounts).sort((a,b)=>b[1]-a[1])[0];
+  const stageCounts = {}; pool.forEach(t => { if(t.stage) stageCounts[t.stage] = (stageCounts[t.stage]||0)+1; });
+  const topStages = Object.entries(stageCounts).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const topOf = (key) => {
+    const counts = {}; pool.forEach(t => { const v = t[key] || 'Not specified'; counts[v] = (counts[v]||0)+1; });
+    return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  };
+  return {
+    total, totalUsd, topOwner, topStages,
+    under30Count: groupCount("Under 30 days"), under30Usd: groupUsd("Under 30 days"),
+    d30to100Count: groupCount("30\u2013100 days"), d30to100Usd: groupUsd("30\u2013100 days"),
+    over100Count: over100.length, over100Usd: over100.reduce((s,t)=>s+t.amount_usd,0),
+    over30Count: over30.length, over30Usd: over30.reduce((s,t)=>s+t.amount_usd,0),
+    fandsCount: pool.filter(t => t.stage === STAGE_DEFS.fands.exact).length,
+    legalCount: pool.filter(t => t.stage === STAGE_DEFS.legal.exact).length,
+    vendorCount: pool.filter(t => t.stage === STAGE_DEFS.vendor.exact).length,
+    topWorkflow: topOf('workflow'), topSubsidiary: topOf('subsidiary'), topBusinessUnit: topOf('business_unit'),
+    ownerCount: Object.keys(ownerCounts).length,
+    filtered: Object.values(filters).some(v=>v!=='all') || !!searchTerm()
+  };
+}
+
+function buildEmailHtml(reportLink){
+  const s = emailStats();
+  const maxCount = Math.max(s.under30Count, 1);
+  const midPct = Math.round((s.d30to100Count / maxCount) * 100);
+  const over100Pct = Math.round((s.over100Count / maxCount) * 100);
+  const topStageLine = s.topStages.map(([label,count]) => `${label} (${count})`).join(', ');
+  const href = isHostedUrl(reportLink) ? buildFilteredLink(reportLink) : '#';
+  const linkNote = isHostedUrl(reportLink) ? '' : `<p style="margin:8px 0 0 0; color:#B34B33; font-size:11px;">No hosted link provided yet \u2014 add one in the panel before sending.</p>`;
+  const sendDate = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin:0; padding:0; background-color:#F4F4F4; font-family:Arial, Helvetica, sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F4F4F4; padding:24px 0;">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#151A22; border-radius:4px; overflow:hidden;">
+  <tr><td style="padding:28px 32px 20px 32px;">
+    <p style="margin:0 0 6px 0; color:#A7ADBB; font-size:12px; letter-spacing:0.02em;">PROCUREMENT OPERATIONS</p>
+    <h1 style="margin:0; color:#ECE7DB; font-size:22px; font-family:Georgia, 'Times New Roman', serif; font-weight:normal;">Open Ticket aging report for Manila</h1>
+    <p style="margin:6px 0 0 0; color:#A7ADBB; font-size:12px;">${sendDate}</p>
+    ${s.filtered ? `<p style="margin:8px 0 0 0; color:#C6852E; font-size:11.5px;">Filtered view \u2014 not the full unfiltered ticket set.</p>` : ''}
+  </td></tr>
+  <tr><td style="padding:0 32px 24px 32px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td width="33%" style="padding:14px 8px; background-color:#1D2430; border:1px solid #333D4E;" align="center">
+        <div style="color:#A7ADBB; font-size:11px; margin-bottom:6px;">Total open</div>
+        <div style="color:#ECE7DB; font-size:20px; font-family:'Courier New', monospace; font-weight:bold;">${s.total}</div>
+      </td>
+      <td width="2%"></td>
+      <td width="33%" style="padding:14px 8px; background-color:#1D2430; border:1px solid #333D4E;" align="center">
+        <div style="color:#A7ADBB; font-size:11px; margin-bottom:6px;">Total value</div>
+        <div style="color:#ECE7DB; font-size:20px; font-family:'Courier New', monospace; font-weight:bold;">${fmtUsd(s.totalUsd, true)}</div>
+      </td>
+      <td width="2%"></td>
+      <td width="33%" style="padding:14px 8px; background-color:#1D2430; border:1px solid #333D4E;" align="center">
+        <div style="color:#A7ADBB; font-size:11px; margin-bottom:6px;">Value, Days &gt; 30</div>
+        <div style="color:#C6852E; font-size:20px; font-family:'Courier New', monospace; font-weight:bold;">${fmtUsd(s.over30Usd, true)}</div>
+      </td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="padding:0 32px 8px 32px;">
+    <p style="margin:0 0 14px 0; color:#ECE7DB; font-size:14px; font-weight:bold;">Open tickets by age</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;"><tr>
+      <td width="110" style="color:#A7ADBB; font-size:12px; vertical-align:middle;">Under 30 days</td>
+      <td style="vertical-align:middle;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td width="100%" style="background-color:#4C9A8E; height:18px; border-radius:2px;"></td>
+      </tr></table></td>
+      <td width="110" align="right" style="color:#ECE7DB; font-size:12px; font-family:'Courier New', monospace; vertical-align:middle; padding-left:8px;">${s.under30Count} &middot; ${fmtUsd(s.under30Usd, true)}</td>
+    </tr></table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;"><tr>
+      <td width="110" style="color:#A7ADBB; font-size:12px; vertical-align:middle;">30\u2013100 days</td>
+      <td style="vertical-align:middle;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td width="${midPct}%" style="background-color:#C6852E; height:18px; border-radius:2px;"></td>
+        <td width="${100-midPct}%" style="background-color:#232B39; height:18px;"></td>
+      </tr></table></td>
+      <td width="110" align="right" style="color:#ECE7DB; font-size:12px; font-family:'Courier New', monospace; vertical-align:middle; padding-left:8px;">${s.d30to100Count} &middot; ${fmtUsd(s.d30to100Usd, true)}</td>
+    </tr></table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:4px;"><tr>
+      <td width="110" style="color:#A7ADBB; font-size:12px; vertical-align:middle;">Over 100 days</td>
+      <td style="vertical-align:middle;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td width="${over100Pct}%" style="background-color:#B34B33; height:18px; border-radius:2px;"></td>
+        <td width="${100-over100Pct}%" style="background-color:#232B39; height:18px;"></td>
+      </tr></table></td>
+      <td width="110" align="right" style="color:#ECE7DB; font-size:12px; font-family:'Courier New', monospace; vertical-align:middle; padding-left:8px;">${s.over100Count} &middot; ${fmtUsd(s.over100Usd, true)}</td>
+    </tr></table>
+    <p style="margin:10px 0 0 0; color:#6E7A8F; font-size:11px;">"Days &gt; 30" is a strict count \u2014 a ticket at exactly 30 days sits in the 30\u2013100 bucket above but isn't counted there.</p>
+  </td></tr>
+  <tr><td style="padding:0 32px 8px 32px;">
+    <p style="margin:0 0 14px 0; color:#ECE7DB; font-size:14px; font-weight:bold;">Pending-stage breakdown</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td width="33%" style="padding:12px 8px; background-color:#1D2430; border:1px solid #333D4E;" align="center">
+        <div style="color:#A7ADBB; font-size:10.5px; margin-bottom:6px;">F&amp;S + Manager</div>
+        <div style="color:#ECE7DB; font-size:18px; font-family:'Courier New', monospace; font-weight:bold;">${s.fandsCount}</div>
+      </td>
+      <td width="2%"></td>
+      <td width="33%" style="padding:12px 8px; background-color:#1D2430; border:1px solid #333D4E;" align="center">
+        <div style="color:#A7ADBB; font-size:10.5px; margin-bottom:6px;">Legal review</div>
+        <div style="color:#ECE7DB; font-size:18px; font-family:'Courier New', monospace; font-weight:bold;">${s.legalCount}</div>
+      </td>
+      <td width="2%"></td>
+      <td width="33%" style="padding:12px 8px; background-color:#1D2430; border:1px solid #333D4E;" align="center">
+        <div style="color:#A7ADBB; font-size:10.5px; margin-bottom:6px;">Vendor confirm.</div>
+        <div style="color:#ECE7DB; font-size:18px; font-family:'Courier New', monospace; font-weight:bold;">${s.vendorCount}</div>
+      </td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="padding:20px 32px 8px 32px;">
+    <p style="margin:0; color:#A7ADBB; font-size:13px; line-height:1.6;">
+      ${topStageLine ? `The most common blockers right now are ${topStageLine}. ` : ''}${s.total} open tickets span ${s.ownerCount} owner${s.ownerCount===1?'':'s'}.${s.topWorkflow ? ` Most are ${s.topWorkflow[0]} requests (${s.topWorkflow[1]}).` : ''}${s.topSubsidiary ? ` Top subsidiary: ${s.topSubsidiary[0]} (${s.topSubsidiary[1]}).` : ''}
+    </p>
+  </td></tr>
+  <tr><td style="padding:20px 32px 32px 32px;" align="center">
+    <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background-color:#C6852E; border-radius:3px;">
+      <a href="${href}" target="_blank" style="display:inline-block; padding:12px 28px; color:#151A22; font-size:13px; font-weight:bold; text-decoration:none;">Open the full interactive report &rarr;</a>
+    </td></tr></table>
+    <p style="margin:12px 0 0 0; color:#6E7A8F; font-size:11px;">The link opens the same filtered view shown here, with live charts, pending-stage details, owner breakdowns, and the full ticket list \u2014 the charts run there, not in this email.</p>
+    ${linkNote}
+  </td></tr>
+  <tr><td style="padding:16px 32px 24px 32px; border-top:1px solid #333D4E;">
+    <p style="margin:0; color:#6E7A8F; font-size:11px;">Computed directly from raw.xlsx \u00b7 ${TICKETS.length} pending tickets (Awaiting approval / Paused) as of Sep 28, 2026.</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+function initEmailPanel(){
+  const toggleBtn = document.getElementById('emailToggleBtn');
+  const panel = document.getElementById('emailPanel');
+  const subjectEl = document.getElementById('emailSubject');
+  const bodyEl = document.getElementById('emailBody');
+  const reportLinkEl = document.getElementById('reportLink');
+  const warningEl = document.getElementById('linkWarning');
+  const frame = document.getElementById('emailPreviewFrame');
+
+  function refresh(){
+    subjectEl.value = 'MANILA Open Ticket Aging report';
+    bodyEl.value = buildReportSummary(reportLinkEl.value);
+    warningEl.classList.toggle('show', reportLinkEl.value.trim() !== '' && !isHostedUrl(reportLinkEl.value));
+    frame.srcdoc = buildEmailHtml(reportLinkEl.value);
+  }
+
+  toggleBtn.addEventListener('click', () => {
+    const opening = !panel.classList.contains('open');
+    panel.classList.toggle('open');
+    if (opening) refresh();
+  });
+  reportLinkEl.addEventListener('input', refresh);
+
+  document.querySelectorAll('#emailTabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#emailTabs button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const html = btn.dataset.tab === 'html';
+      document.getElementById('emailPlainView').style.display = html ? 'none' : 'block';
+      document.getElementById('emailHtmlView').style.display = html ? 'block' : 'none';
+      if (html) frame.srcdoc = buildEmailHtml(reportLinkEl.value);
+    });
+  });
+
+  document.getElementById('openGmailBtn').addEventListener('click', () => {
+    const to = document.getElementById('emailTo').value.trim().split(',').map(s=>s.trim()).filter(Boolean).join(',');
+    const cc = document.getElementById('emailCc').value.trim().split(',').map(s=>s.trim()).filter(Boolean).join(',');
+    const subject = encodeURIComponent(subjectEl.value || '');
+    const body = encodeURIComponent(bodyEl.value || '');
+    let url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${subject}&body=${body}`;
+    if (cc) url += `&cc=${encodeURIComponent(cc)}`;
+    window.open(url, '_blank');
+  });
+
+  document.getElementById('openDefaultBtn').addEventListener('click', () => {
+    const to = document.getElementById('emailTo').value.trim().split(',').map(s=>s.trim()).filter(Boolean).join(',');
+    const cc = document.getElementById('emailCc').value.trim().split(',').map(s=>s.trim()).filter(Boolean).join(',');
+    const subject = encodeURIComponent(subjectEl.value || '');
+    const body = encodeURIComponent(bodyEl.value || '');
+    let url = `mailto:${to}?subject=${subject}&body=${body}`;
+    if (cc) url += `&cc=${encodeURIComponent(cc)}`;
+    window.location.href = url;
+  });
+
+  document.getElementById('copySummaryBtn').addEventListener('click', async () => {
+    const text = bodyEl.value || buildReportSummary(reportLinkEl.value);
+    try { await navigator.clipboard.writeText(text); }
+    catch(e){ bodyEl.select(); document.execCommand('copy'); }
+    flashCopied();
+  });
+
+  document.getElementById('downloadChartsBtn').addEventListener('click', () => {
+    ['stackedAgeChart','stackedUsdChart'].forEach(id => {
+      const chart = CHARTS[id];
+      if (!chart) return;
+      const a = document.createElement('a');
+      a.href = chart.toBase64Image();
+      a.download = id + '.png';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    });
+  });
+
+  document.getElementById('copyFormattedBtn').addEventListener('click', () => {
+    const doc = frame.contentDocument;
+    if (!doc) return;
+    const range = doc.createRange();
+    range.selectNodeContents(doc.body);
+    const sel = doc.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    try { doc.execCommand('copy'); } catch(e){}
+    sel.removeAllRanges();
+    flashCopied('copyConfirmHtml');
+  });
+
+  document.getElementById('copyHtmlSourceBtn').addEventListener('click', async () => {
+    const html = buildEmailHtml(reportLinkEl.value);
+    try { await navigator.clipboard.writeText(html); }
+    catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = html; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+    }
+    flashCopied('copyConfirmHtml');
+  });
+
+  function flashCopied(id='copyConfirm'){
+    const conf = document.getElementById(id);
+    conf.style.display = 'inline';
+    setTimeout(()=> conf.style.display = 'none', 1800);
+  }
+}
+
+/* ============ FOOTER ============ */
+function renderFooter(){
+  document.getElementById('footerNote').textContent =
+    `Computed directly from raw.xlsx \u00b7 ${TICKETS.length} pending tickets (Status = Awaiting approval / Paused) as of Sep 28, 2026 \u00b7 amounts in USD \u00b7 no records fabricated.`;
+}
+
+/* ============ INIT ============ */
+function applyUrlParams(){
+  const params = new URLSearchParams(window.location.search);
+  FILTER_KEYS.forEach(k => {
+    if (params.has(k)){
+      filters[k] = params.get(k);
+      const sel = document.getElementById(k);
+      if (sel) sel.value = params.get(k);
+    }
+  });
+  if (params.has('q')) document.getElementById('fSearch').value = params.get('q');
+}
+
+populateFilterOptions();
+applyUrlParams();
+renderAll();
+renderOwnerUtilization();
+renderFooter();
+initEmailPanel();
+</script>
+</body>
+</html>
